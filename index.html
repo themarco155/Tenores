@@ -1,0 +1,295 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tenores</title>
+  <meta name="description" content="Canciones, equipo y recuerdos de los tenores del coro." />
+  <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dcwx23x5o/image/upload/v1760049941/logo_tenores_oeotg5.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="quickMenu">
+    <span class="sr-only">Abrir menú de opciones</span>
+    <span class="menu-line" aria-hidden="true"></span>
+    <span class="menu-line" aria-hidden="true"></span>
+    <span class="menu-line" aria-hidden="true"></span>
+  </button>
+  <nav id="quickMenu" class="quick-menu" aria-label="Secciones de Tenores" hidden>
+    <details class="quick-menu__folder">
+      <summary>2026</summary>
+      <div class="quick-menu__contents">
+        <button class="quick-menu__item" type="button" data-action="data-2026">Datos 2026</button>
+        <button class="quick-menu__item" type="button" data-action="presentations-2026">Presentaciones 2026</button>
+      </div>
+    </details>
+    <details class="quick-menu__folder">
+      <summary>2025</summary>
+      <div class="quick-menu__contents">
+        <button class="quick-menu__item" type="button" data-action="data-2025">Datos 2025</button>
+        <button class="quick-menu__item" type="button" data-action="presentations-2025">Presentaciones 2025</button>
+      </div>
+    </details>
+    <details class="quick-menu__folder">
+      <summary>Recuerdos</summary>
+      <div class="quick-menu__contents">
+        <button class="quick-menu__item" type="button" data-action="memories">Ver recuerdos</button>
+      </div>
+    </details>
+  </nav>
+  <div class="container">
+    <header>
+      <div class="logo-wrap">
+        <img src="https://res.cloudinary.com/dcwx23x5o/image/upload/v1760049941/logo_tenores_oeotg5.svg" alt="Logo Tenores" />
+      </div>
+      <h1 class="site-title">Tenores</h1>
+      <div class="accent-bar"></div>
+      <p class="subtitle">Bienvenido al equipo. Si hacemos las cosas bien, 2026 será el mejor año de nuestra historia.</p>
+    </header>
+
+    <main>
+      <section id="home" aria-labelledby="canciones-titulo">
+        <h2 id="canciones-titulo" class="home-section-title">Canciones del coro</h2>
+
+        <div class="search">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-3.5-3.5"/>
+          </svg>
+          <input id="q" type="search" placeholder="Buscar canci&oacute;n&hellip;" autocomplete="off" aria-label="Buscar canci&oacute;n" />
+          <span class="suggest" id="suggest" role="status" aria-live="polite" hidden></span>
+        </div>
+        <div id="grid" class="grid" aria-labelledby="canciones-titulo">
+          <a class="mini-card" href="#fum" data-song="fum"><span class="mini-badge">01</span><span class="mini-title">Fum Fum Fum</span></a>
+          <a class="mini-card" href="#campanas" data-song="campanas"><span class="mini-badge">02</span><span class="mini-title">Canto de las campanas</span></a>
+          <a class="mini-card" href="#adeste" data-song="adeste"><span class="mini-badge">03</span><span class="mini-title">Adeste Fideles</span></a>
+          <a class="mini-card" href="#dona" data-song="dona"><span class="mini-badge">04</span><span class="mini-title">Dona Nobis Pacem</span></a>
+          <a class="mini-card" href="#fuentecilla" data-song="fuentecilla"><span class="mini-badge">05</span><span class="mini-title">Fuentecilla que corres</span></a>
+          <a class="mini-card" href="#estrella" data-song="estrella"><span class="mini-badge">06</span><span class="mini-title">Estrella Errante</span></a>
+          <a class="mini-card" href="#paz" data-song="paz"><span class="mini-badge">07</span><span class="mini-title">Himno a la paz</span></a>
+          <a class="mini-card" href="#merry" data-song="merry"><span class="mini-badge">08</span><span class="mini-title">We wish you a merry christmas</span></a>
+          <a class="mini-card" href="#kling" data-song="kling"><span class="mini-badge">09</span><span class="mini-title">Kling Gl&ouml;ckchen</span></a>
+          <a class="mini-card" href="#tannenbaum" data-song="tannenbaum"><span class="mini-badge">10</span><span class="mini-title">O Tannenbaum</span></a>
+          <a class="mini-card" href="#mundo" data-song="mundo"><span class="mini-badge">11</span><span class="mini-title">Mundo feliz</span></a>
+          <a class="mini-card" href="#stelle" data-song="stelle"><span class="mini-badge">12</span><span class="mini-title">Tu scendi dalle stelle</span></a>
+        </div>
+      </section>
+
+      <section id="memories-view" class="memories-view" aria-label="Recuerdos" hidden>
+        <div id="memoriesIndex">
+          <a class="back" href="#">&larr; Volver a canciones</a>
+          <div class="memories-heading">
+            <p class="memories-eyebrow">Archivo de Tenores</p>
+            <h2 id="memoriesTitle">Recuerdos</h2>
+            <p>Elige un recuerdo para abrirlo.</p>
+          </div>
+          <div class="memories-collection">
+            <a class="memory-card" href="#recuerdos/carta" aria-label="Abrir carta de despedida de 2025">
+              <div class="memory-card__art" aria-hidden="true">
+                <img src="assets/letter-banner.svg" alt="" />
+              </div>
+              <div class="memory-card__content">
+                <span class="memory-card__eyebrow">Carta · 2025</span>
+                <h3>Carta de despedida</h3>
+                <span class="memory-card__action">Abrir carta <span aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div id="memoryReader" hidden>
+          <a class="back" href="#recuerdos">&larr; Volver a recuerdos</a>
+          <article class="memory-letter" aria-labelledby="letterReaderTitle">
+            <div class="memory-letter__masthead"><span>Tenores</span><span>Una carta para la cuerda</span></div>
+            <div class="memory-letter__hero">
+              <p class="letter-kicker">Carta de despedida · 2025</p>
+              <h3 id="letterReaderTitle" class="letter-reader__title"></h3>
+              <p id="letterReaderSubtitle" class="letter-reader__subtitle"></p>
+              <img class="letter-banner letter-banner--reader" src="assets/letter-banner.svg" alt="Ilustración de la carta de despedida" />
+            </div>
+            <div id="letterContent" class="letter-content"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="song-view" hidden>
+        <a class="back" href="#">&larr; Volver</a>
+        <h2 class="song-title" id="song-title">Título</h2>
+        <p class="song-meta" id="song-meta">Bienvenido al equipo. Si hacemos las cosas bien, 2026 será el mejor año de nuestra historia.</p>
+
+        <div class="audios-grid">
+
+          <article class="audio-card">
+            <div class="audio-card-header">
+              <h3>Canci&oacute;n</h3>
+            </div>
+            <div class="audio-player" data-player="trk">
+              <button class="audio-toggle" type="button" data-role="toggle" aria-label="Reproducir canci&oacute;n">
+                <span aria-hidden="true">&#9654;</span><span class="sr-only">Reproducir canción</span>
+              </button>
+              <div class="audio-progress-group">
+                <div class="audio-progress" data-role="progress" tabindex="0" role="slider" aria-label="Progreso canci&oacute;n" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="audio-progress-fill" data-role="fill"></div>
+                </div>
+                <div class="audio-times">
+                  <span class="audio-time" data-role="current">00:00</span>
+                  <span class="audio-time" data-role="duration">--:--</span>
+                </div>
+              </div>
+              <div class="audio-cta">
+                <div class="more">
+                  <button class="dots" data-menu="trk" aria-haspopup="true" aria-expanded="false">
+                    <svg viewBox="0 0 16 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                      <circle cx="2" cy="2" r="1"></circle>
+                      <circle cx="8" cy="2" r="1"></circle>
+                      <circle cx="14" cy="2" r="1"></circle>
+                    </svg>
+                    <span class="sr-only">Ajustar velocidad</span>
+                  </button>
+                  <div class="speed-menu" data-for="trk" hidden>
+                    <button class="speed" data-speed="0.75">0.75x</button>
+                    <button class="speed" data-speed="0.9">0.9x</button>
+                    <button class="speed" data-speed="1">1x</button>
+                    <button class="speed" data-speed="1.25">1.25x</button>
+                    <button class="speed" data-speed="1.5">1.5x</button>
+                    <button class="speed" data-speed="2">2x</button>
+                  </div>
+                </div>
+                <a id="dl-track" class="btn small quiet" href="#" download>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+                  <span class="label" id="lbl-track">Descargar</span>
+                </a>
+              </div>
+            </div>
+            <audio id="audio-track" preload="metadata"></audio>
+            <p id="audio-status" class="audio-status" role="status" hidden></p>
+          </article>
+<article class="audio-card lyrics-card">
+            <div class="lyrics-header">
+              <h3>Letra</h3>
+              <div class="lyrics-controls">
+                <button id="fontDown" class="chip small" aria-label="Reducir tama&ntilde;o">A&minus;</button>
+                <button id="fontUp" class="chip small" aria-label="Aumentar tama&ntilde;o">A+</button>
+              </div>
+            </div>
+            <div id="lyrics-wrap" class="lyrics-wrap">
+              <div id="lyrics" class="lyrics"><em>Cargando letra...</em></div>
+            </div>
+            <div class="btn-row" style="justify-content:center;margin-top:6px">
+              <button id="toggle-lyrics" class="btn btn-ghost small" hidden>Ver más</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <button id="auBtn" class="fab" aria-label="Celebrar Aú Aú"><span class="fab-line">Aú</span><span class="fab-line">Aú</span></button>
+  <div id="auCelebration" class="au-celebration" hidden role="status" aria-live="polite">
+    <div class="au-celebration__message"><strong>2026</strong><span>¡Sé el buen tenor!</span></div>
+    <div id="auFireworks" class="au-fireworks" aria-hidden="true"></div>
+  </div>
+
+  <div id="mini" class="mini" hidden>
+    <button id="mini-toggle" class="mini-btn" aria-label="Reproducir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="8,5 19,12 8,19 8,5"></polygon>
+      </svg>
+    </button>
+    <button id="mini-loop" class="mini-btn" aria-label="Activar repetici&oacute;n continua" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+    </button>
+    <div id="mini-meta" class="mini-meta" title="Abrir canci&oacute;n" role="button" tabindex="0" aria-label="Abrir canción en reproducción">
+      <div id="mini-title" class="mini-title">&mdash;</div>
+      <div id="mini-sub" class="mini-sub">&mdash;</div>
+    </div>
+    <div id="mini-bar" class="mini-bar" aria-label="Progreso de reproducción" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="mini-prog" class="mini-prog"></div>
+    </div>
+    <button id="mini-close" class="mini-btn" aria-label="Detener y cerrar">&times;</button>
+  </div>
+
+  <div id="dataPanel" class="data-panel" hidden>
+    <div class="data-panel__backdrop" data-role="close-panel" aria-hidden="true"></div>
+    <section class="data-panel__sheet" role="dialog" aria-labelledby="dataPanelTitle" aria-modal="true" tabindex="-1">
+      <header class="data-panel__header">
+        <div>
+          <p id="dataPanelEyebrow" class="data-panel__eyebrow" hidden></p>
+          <h2 id="dataPanelTitle">Datos 2026</h2>
+          <p id="dataPanelIntro" class="data-panel__intro">Aún no hay registros de asistencia ni ensayos de 2026.</p>
+        </div>
+        <button id="dataClose" class="data-close" type="button" aria-label="Cerrar datos del equipo">&times;</button>
+      </header>
+      <div class="data-panel__body">
+        <div class="data-panel__tabs" role="tablist">
+          <button id="tabOverview" class="data-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="dataOverview" data-tab-target="overview">Resumen del equipo</button>
+          <button id="tabTenors" class="data-tab" type="button" role="tab" aria-selected="false" aria-controls="dataTenors" data-tab-target="tenors">Tenores</button>
+        </div>
+        <section id="dataOverview" class="data-panel__section" role="tabpanel" aria-labelledby="tabOverview">
+          <div id="overviewDetail" class="data-detail data-detail--overview">
+            <p class="data-panel__empty">Cargando resumen&hellip;</p>
+          </div>
+        </section>
+        <section id="dataTenors" class="data-panel__section" role="tabpanel" aria-labelledby="tabTenors" hidden>
+          <div class="tenor-panel">
+            <div id="tenorListView" class="data-sidebar tenor-list-view" role="region" aria-label="Tenores disponibles">
+              <div class="data-sidebar__header">
+                <p id="tenorListIntro">Explora a los integrantes del equipo.</p>
+              </div>
+              <div id="dataCards" class="data-list" role="list"></div>
+            </div>
+            <div id="tenorDetailView" class="tenor-detail" hidden>
+              <button id="tenorBack" class="data-back" type="button">
+                <span aria-hidden="true">&#8592;</span>
+                Lista de tenores
+              </button>
+              <section id="dataDetail" class="data-detail" aria-live="polite">
+                <p class="data-panel__empty">Selecciona un tenor para consultar sus datos.</p>
+              </section>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+  <div id="presentationsPanel" class="presentations-panel" hidden>
+    <div class="presentations-panel__backdrop" data-role="close-presentations" aria-hidden="true"></div>
+    <section class="presentations-panel__sheet" role="dialog" aria-labelledby="presentationsTitle" aria-modal="true">
+      <header class="presentations-panel__header">
+        <div class="presentations-panel__heading">
+          <p id="presentationsPeriod" class="calendar-eyebrow">Noviembre – diciembre de 2025</p>
+          <h1 id="presentationsTitle">Presentaciones 2025</h1>
+          <p class="presentations-panel__intro">Clic sobre las fechas marcadas con verde para ver detalles.</p>
+        </div>
+        <button id="presentationsClose" class="presentations-close" type="button" aria-label="Cerrar panel Presentaciones">&times;</button>
+      </header>
+      <div class="presentations-panel__body">
+        <div class="presentations-panel__layout">
+          <section class="calendar-board">
+            <div id="presentationsCalendar" class="calendar-months"></div>
+          </section>
+        </div>
+        
+      </div>
+    </section>
+  </div>
+  <div id="calendarPopover" class="calendar-popover" hidden>
+    <div class="calendar-popover__backdrop" data-role="close-calendar" aria-hidden="true"></div>
+    <article class="calendar-popover__card" role="dialog" aria-modal="true" aria-labelledby="calendarPopoverTitle">
+      <header class="calendar-popover__header">
+        <p id="calendarPopoverDate" class="calendar-eyebrow">Fecha</p>
+        <h3 id="calendarPopoverTitle">Presentación</h3>
+        <button id="calendarPopoverClose" class="calendar-popover__close" type="button" aria-label="Cerrar detalles">&times;</button>
+      </header>
+      <div id="calendarPopoverBody" class="calendar-popover__body"></div>
+    </article>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
