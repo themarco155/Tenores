@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { align, frameCost, downsample2, firstVoicedRun } from '../practice/align.js';
 import { segmentNotes } from '../practice/segment.js';
-import { MELODY, curve } from './helpers/melody.js';
+import { MELODY, curve, ramp } from './helpers/melody.js';
 
 const userAtRef = (path, r) => path.find(([, rr]) => rr >= r)[0];
 
@@ -50,4 +50,12 @@ test('el camino recorre la referencia de principio a fin', () => {
 
 test('entradas vacías devuelven camino vacío', () => {
   assert.deepEqual(align([], curve(MELODY), { bandFrames: 100 }), []);
+});
+
+test('una nota final que cae no se comprime sobre pocos frames del usuario', () => {
+  const ref = curve(MELODY);
+  const user = [...ref.slice(0, 480), ...ramp(57, 56.6, 100)];
+  const path = align(user, ref, { bandFrames: Math.max(100, Math.round(ref.length * 0.15)) });
+  const used = new Set(path.filter(([, r]) => r >= 485 && r < 577).map(([u]) => u));
+  assert.ok(used.size >= 70, `solo ${used.size} frames de usuario`);
 });

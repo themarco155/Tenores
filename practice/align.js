@@ -1,7 +1,7 @@
 export const ALIGN = {
   nullCost: 1,       // un lado con voz y el otro no
   maxCost: 3,        // semitonos máximos por frame
-  stepPenalty: 0.05, // penaliza deformar el tiempo para preferir la diagonal
+  stepPenalty: 0.4, // penaliza deformar el tiempo para preferir la diagonal
   minRun: 5,         // frames seguidos con voz para detectar el inicio
 };
 
