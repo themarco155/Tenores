@@ -3,9 +3,21 @@ import { readFileSync } from 'node:fs';
 
 const dir = new URL('../assets/pitch/', import.meta.url);
 const { songs } = JSON.parse(readFileSync(new URL('index.json', dir), 'utf8'));
+if (!Array.isArray(songs) || !songs.length) {
+  console.error('✗ index.json no lista ninguna canción');
+  process.exit(1);
+}
 let failed = false;
 for (const id of songs) {
-  const ref = JSON.parse(readFileSync(new URL(`${id}.json`, dir), 'utf8'));
+  let ref;
+  try {
+    ref = JSON.parse(readFileSync(new URL(`${id}.json`, dir), 'utf8'));
+    if (!ref || !Array.isArray(ref.midi) || !Array.isArray(ref.notes) || !Array.isArray(ref.phrases)) throw new Error('faltan midi, notes o phrases');
+  } catch (err) {
+    console.log(`✗ ${String(id).padEnd(12)} — ${id}.json ${err.code === 'ENOENT' ? 'no existe' : `mal formado: ${err.message}`}`);
+    failed = true;
+    continue;
+  }
   const problems = [];
   if (ref.version !== 1) problems.push('version ≠ 1');
   if (ref.songId !== id) problems.push(`songId ${ref.songId}`);
