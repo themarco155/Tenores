@@ -6,6 +6,7 @@ import { formatTime } from './util.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
+const GUIDE_TIMEOUT_MS = 3000; // si la guía no empieza a sonar en este tiempo, se avisa
 const METRICS = [['pitch', 'Afinación'], ['rhythm', 'Ritmo y entradas'], ['stability', 'Estabilidad']];
 
 let panel = null, sheet = null, body = null, titleEl = null, opener = null;
@@ -99,9 +100,47 @@ function wait(ms) {
   });
 }
 
-function seekAndPlay(audio, time) {
-  const go = () => { audio.currentTime = time; audio.play().catch(() => {}); };
+// Coloca el audio en `time` sin reproducirlo. iOS ignora preload: load() fuerza la carga.
+// Con readyState 0 el valor queda como posición inicial por defecto; al llegar los
+// metadatos se vuelve a fijar por si el navegador no la respetó.
+function seekAudio(token, time) {
+  const audio = s.audio;
+  if (audio.readyState === 0) audio.load();
+  audio.currentTime = time;
+  if (audio.readyState < 1) {
+    audio.addEventListener('loadedmetadata', () => {
+      if (!stale(token) && Math.abs(audio.currentTime - time) > 0.05) audio.currentTime = time;
+    }, { once: true });
+  }
+}
+
+function seekAndPlay(token, time) {
+  seekAudio(token, time);
+  const audio = s.audio;
+  const go = () => { if (!stale(token)) audio.play().catch(() => {}); };
   if (audio.readyState >= 1) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
+}
+
+// Reproduce la guía y se resuelve cuando suena de verdad (evento `playing`): ese es
+// el instante cero de la grabación. Se rechaza si play() falla o no suena en 3 s.
+function playGuide() {
+  const audio = s.audio, timers = s.timers;
+  return new Promise((resolve, reject) => {
+    let timer = 0;
+    const settle = (ok, err) => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timers.delete(timer);
+      timer = 0;
+      audio.removeEventListener('playing', onPlaying);
+      if (ok) resolve(); else reject(err);
+    };
+    const onPlaying = () => settle(true);
+    timer = setTimeout(() => settle(false, new Error('La guía no empezó a sonar')), GUIDE_TIMEOUT_MS);
+    timers.add(timer);
+    audio.addEventListener('playing', onPlaying);
+    audio.play().catch(err => settle(false, err));
+  });
 }
 
 async function loadReference() {
@@ -211,7 +250,10 @@ async function startTake() {
   await ctx.resume();
   if (stale(token)) return;
 
-  if (mode === 'test') {
+  if (mode === 'guide') {
+    s.audio.pause();
+    seekAudio(token, startSec); // la búsqueda termina durante la cuenta atrás
+  } else {
     renderCountdown('Nota de partida', 'Escucha tu primera nota');
     await playTone(ctx, s.ref.notes[first.noteFrom].midi, 1);
     if (stale(token)) return;
@@ -223,8 +265,19 @@ async function startTake() {
     if (stale(token)) return;
   }
 
+  if (mode === 'guide') {
+    renderCountdown('¡Ya!', 'Empieza la guía');
+    try { await playGuide(); }
+    catch {
+      if (stale(token)) return;
+      s.audio.pause();
+      renderError('No se pudo reproducir la guía.', startTake);
+      return;
+    }
+    if (stale(token)) return;
+  }
+  // En guía, la grabación y el límite de tiempo cuentan desde que la guía suena.
   s.recorder.start();
-  if (mode === 'guide') seekAndPlay(s.audio, startSec);
   const limitSec = mode === 'guide' ? durSec + 1 : durSec * 1.3 + 2;
   renderRecording(limitSec, token, { mode, from, to });
 }
@@ -366,7 +419,7 @@ function playRefPhrase(index) {
   const onTime = () => { if (s.audio.currentTime >= end) stopRefSegment(); };
   s.refStop = () => { s.audio.pause(); s.audio.removeEventListener('timeupdate', onTime); s.refStop = null; };
   s.audio.addEventListener('timeupdate', onTime);
-  seekAndPlay(s.audio, p.start * hop);
+  seekAndPlay(s.token, p.start * hop);
 }
 
 function stopRefSegment() {
