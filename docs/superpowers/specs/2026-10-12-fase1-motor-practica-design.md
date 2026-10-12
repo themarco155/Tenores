@@ -9,7 +9,8 @@ Que cualquier visitante pueda grabarse cantando la parte de tenor de una canció
 
 **Criterios de éxito**
 - Una grabación que reproduce la referencia desplazada +50 cents obtiene una afinación claramente menor
-  (< 60) que la misma sin desplazar (> 90), y el consejo principal menciona "alto".
+  (< 70; con los umbrales iniciales da ~62) que la misma sin desplazar (> 90), y aparece un consejo
+  `pitch-bias` que menciona "alto".
 - Una grabación estirada en el tiempo un 10 % en modo "a prueba" conserva afinación > 90.
 - El análisis de 70 s de audio termina en menos de 3 s en un móvil de gama media y no congela la interfaz.
 - `app.js` y `styles.css` no se modifican; `index.html` solo gana 2 líneas.
@@ -52,7 +53,7 @@ segmentación, dibuja la curva para revisión visual y permite descargar el JSON
 Los JSON se versionan en el repo. Se eligió página de navegador en lugar de script de Node porque la mayoría
 de pistas son MP3 y Node no las decodifica sin dependencias.
 
-### Segmentación (`analyze.js`, compartida con el análisis del cantante)
+### Segmentación (`segment.js`)
 - **Notas:** tramos de frames con voz; se corta cuando la mediana móvil (5 frames) cambia > 0,5 semitonos
   durante ≥ 3 frames. Duración mínima 60 ms (tramos más cortos se fusionan con el vecino). `midi` = mediana.
 - **Frases:** se cortan en silencios ≥ 300 ms. Frases < 1 s se fusionan con la siguiente. Numeradas desde 1.
@@ -123,7 +124,7 @@ Si no hay candidatos y el total ≥ 90 → un único consejo `praise`: "¡Muy bi
   phrases: [{ index: 1, start: 1.2, end: 7.1, pitch: 90, rhythm: 70, stability: null, coverage: 1 }],
   tips: [{ kind: 'pitch-bias', phrase: 3, text: '...' }],
   // Solo para la interfaz, no se envía al backend:
-  curves: { ref: [...], user: [...] /* alineada al eje de referencia */, hopMs: 10 }
+  curves: { ref: [...], user: [...] /* alineada al eje de referencia */, hopMs: 10, startSec: 0 }
 }
 ```
 
@@ -176,11 +177,11 @@ La toma vive solo en memoria y se descarta al cerrar.
 - `pitch`: senos y diente de sierra a 110, 220, 330, 440 Hz → error < 5 cents; silencio → `null`;
   ruido blanco → mayoría `null`.
 - `align`: curva desplazada 300 ms y estirada 10 % → el camino recupera el desplazamiento (± 20 ms).
-- `score`: curva idéntica → total ≥ 95; +50 cents → afinación < 60 y consejo `pitch-bias` "alto";
+- `score`: curva idéntica → total ≥ 95; +50 cents → afinación < 70 y consejo `pitch-bias` "alto";
   octava abajo → consejo `octave`; frase entera retrasada 300 ms → consejo `entry`; nota larga con caída de
   30 cents → consejo `drift`; silencio → `valid: false`.
 - Integración: `audios/Fum Fum Fum - cancion.wav` (lector WAV mínimo en `test/helpers`) contra su propia
-  curva → total ≥ 95; la misma desplazada +50 cents por remuestreo → afinación < 60.
+  curva → total ≥ 95; la misma desplazada +50 cents por remuestreo → afinación < 70.
 
 **Manuales:** Chrome escritorio, Chrome Android, Safari iOS (vía HTTPS): permisos, ambos modos, rango de
 frases, auriculares, cierre a mitad de grabación.

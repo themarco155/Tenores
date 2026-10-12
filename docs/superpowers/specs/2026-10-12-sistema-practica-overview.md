@@ -41,13 +41,20 @@ index.html                 (+2 líneas)
 practice/
   main.js                  punto de entrada; inyecta botón "Practicar" y carpeta "Práctica" del menú
   practice.css
+  util.js                  utilidades numéricas (puro)
   pitch.js                 YIN (puro)
+  segment.js               segmentación en notas y frases (puro)
+  reference.js             construir y recortar referencias (puro)
   align.js                 DTW (puro)
-  score.js                 puntuaciones y consejos (puro)
+  scoring-config.js        constantes SCORING (único lugar para calibrar)
+  score.js                 puntuaciones (puro)
+  tips.js                  consejos (puro)
   analyze.js               orquesta pitch → align → score (puro)
   analysis-worker.js       Web Worker que ejecuta analyze.js
+  analysis-client.js       envía la toma al worker
   recorder.js              micrófono + AudioWorklet
   recorder-worklet.js
+  tones.js                 nota de partida y claqueta
   practice-ui.js           panel de práctica
   chart.js                 gráficas SVG
   api.js                   cliente HTTP del backend          (fase 2)
@@ -55,7 +62,10 @@ practice/
   progress-ui.js           "Mi progreso" / detalle de tenor  (fase 2)
   admin-ui.js              panel de administración           (fase 3)
 assets/pitch/<songId>.json curvas de referencia precalculadas
-tools/build-pitch.mjs      genera assets/pitch/*.json desde los audios
+tools/build-pitch.html     genera assets/pitch/*.json desde los audios (en el navegador)
+tools/check-pitch.mjs      valida los JSON generados
+tools/mic-check.html       diagnóstico rápido de micrófono y afinación
+package.json               solo "type": "module" y el script de tests (sin dependencias)
 test/                      tests de Node (node --test) del motor
 backend/                   Worker, esquema D1, tests (fase 2)
 ```
