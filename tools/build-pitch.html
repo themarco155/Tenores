@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Curvas de referencia</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0b0c0d; color: #eee; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid #2a2d30; text-align: left; }
+    button { cursor: pointer; }
+    .ok { color: #0ffc7e; } .err { color: #ff6b6b; }
+    #preview svg { width: 100%; height: 180px; background: #000; }
+    :root{--chart-good:rgba(15,252,126,.16);--chart-warn:rgba(255,196,0,.16);--chart-bad:rgba(255,92,92,.18);--chart-neutral:rgba(255,255,255,.05)}
+    .chart-ref,.chart-user{fill:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+    .chart-ref{stroke:rgba(255,255,255,.75);stroke-width:2}
+    .chart-user{stroke:#0ffc7e;stroke-width:2}
+  </style>
+</head>
+<body>
+  <h1>Curvas de referencia</h1>
+  <p>Analiza cada pista de <code>app.js</code> y guarda <code>&lt;id&gt;.json</code> e <code>index.json</code> en <code>assets/pitch/</code>.</p>
+  <p>
+    <button id="all" type="button">Analizar todas</button>
+    <button id="save" type="button" disabled>Guardar en carpeta…</button>
+  </p>
+  <table>
+    <thead><tr><th>Id</th><th>Título</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="preview"></div>
+  <script type="module" src="build-pitch.js"></script>
+</body>
+</html>
