@@ -1,3 +1,6 @@
 node_modules/
 .wrangler/
 .dev.vars
+# Audios de trabajo: solo se versiona el que usa el test de integración
+audios/*
+!audios/Fum Fum Fum.wav
