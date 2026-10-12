@@ -5,7 +5,9 @@ const INDEX_URL = new URL('../assets/pitch/index.json', import.meta.url);
 let available = new Set();
 
 function songFromHash() {
-  const id = decodeURIComponent((location.hash || '').slice(1)).trim();
+  let id;
+  try { id = decodeURIComponent((location.hash || '').slice(1)).trim(); }
+  catch { return null; } // hash mal formado (p. ej. #%E0): sin canción
   // SONGS es una constante global de app.js (script clásico, accesible desde módulos).
   if (typeof SONGS === 'undefined' || !Object.prototype.hasOwnProperty.call(SONGS, id)) return null;
   return { id, title: SONGS[id].title, track: SONGS[id].track };
