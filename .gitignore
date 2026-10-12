@@ -4,3 +4,5 @@ node_modules/
 # Audios de trabajo: solo se versiona el que usa el test de integración
 audios/*
 !audios/Fum Fum Fum.wav
+# SQL del primer administrador (contiene el hash del PIN temporal)
+admin-seed.sql
