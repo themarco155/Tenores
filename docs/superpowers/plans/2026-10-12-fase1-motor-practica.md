@@ -20,7 +20,6 @@
 - Frames de 10 ms (`hopMs: 10`) en todas las curvas; tiempos de notas y frases en frames.
 - Textos de interfaz en español, con tildes.
 - Formato de referencia `version: 1` exactamente como en el spec.
-- Commits con la línea final `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Review Focus
 
@@ -190,9 +189,7 @@ Expected: PASS (6 tests).
 
 ```bash
 git add package.json practice/util.js test/util.test.js
-git commit -m "feat(practica): utilidades numéricas y base de tests
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): utilidades numéricas y base de tests"
 ```
 
 ---
@@ -448,9 +445,7 @@ Expected: PASS (todos los tests de `util` y `pitch`).
 
 ```bash
 git add practice/pitch.js test/helpers/synth.js test/pitch.test.js
-git commit -m "feat(practica): detección de afinación con YIN
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): detección de afinación con YIN"
 ```
 
 ---
@@ -646,9 +641,7 @@ Expected: PASS.
 
 ```bash
 git add practice/segment.js test/helpers/melody.js test/segment.test.js
-git commit -m "feat(practica): segmentación en notas y frases
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): segmentación en notas y frases"
 ```
 
 ---
@@ -807,9 +800,7 @@ Expected: PASS.
 
 ```bash
 git add practice/reference.js test/reference.test.js
-git commit -m "feat(practica): construir y recortar curvas de referencia
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): construir y recortar curvas de referencia"
 ```
 
 ---
@@ -993,9 +984,7 @@ Expected: PASS.
 
 ```bash
 git add practice/align.js test/align.test.js
-git commit -m "feat(practica): alineación DTW con banda y extremos libres
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): alineación DTW con banda y extremos libres"
 ```
 
 ---
@@ -1308,9 +1297,7 @@ Expected: PASS. Si un umbral de un test falla por poco, **no cambies el test**: 
 
 ```bash
 git add practice/scoring-config.js practice/score.js test/helpers/melody.js test/score.test.js
-git commit -m "feat(practica): puntuación de afinación, ritmo y estabilidad
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): puntuación de afinación, ritmo y estabilidad"
 ```
 
 ---
@@ -1494,9 +1481,7 @@ Expected: PASS (incluidos los tests de la Task 6).
 
 ```bash
 git add practice/tips.js practice/score.js test/tips.test.js
-git commit -m "feat(practica): consejos de mejora priorizados
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): consejos de mejora priorizados"
 ```
 
 ---
@@ -1697,9 +1682,7 @@ export function runAnalysis(input) {
 
 ```bash
 git add practice/analyze.js practice/analysis-worker.js practice/analysis-client.js test/helpers/wav.js test/analyze.test.js
-git commit -m "feat(practica): orquestador de análisis y web worker
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): orquestador de análisis y web worker"
 ```
 
 ---
@@ -1812,9 +1795,7 @@ Expected: PASS.
 
 ```bash
 git add practice/chart.js test/chart.test.js
-git commit -m "feat(practica): gráfica SVG de referencia frente a la voz
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): gráfica SVG de referencia frente a la voz"
 ```
 
 ---
@@ -2061,9 +2042,7 @@ Expected: 12 líneas con `✓` y código de salida 0. Las líneas con `⚠` (men
 
 ```bash
 git add tools/songs-parser.js tools/build-pitch.html tools/build-pitch.js tools/check-pitch.mjs test/songs-parser.test.js assets/pitch
-git commit -m "feat(practica): generador y curvas de referencia de las 12 canciones
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): generador y curvas de referencia de las 12 canciones"
 ```
 
 ---
@@ -2287,9 +2266,7 @@ Run además: `npm test`. Expected: PASS (sin cambios en tests).
 
 ```bash
 git add practice/recorder-worklet.js practice/recorder.js practice/tones.js tools/mic-check.html tools/mic-check.js
-git commit -m "feat(practica): grabación con AudioWorklet, tonos y diagnóstico de micrófono
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): grabación con AudioWorklet, tonos y diagnóstico de micrófono"
 ```
 
 ---
@@ -2874,9 +2851,7 @@ Expected: PASS.
 
 ```bash
 git add practice/practice-ui.js practice/main.js practice/practice.css index.html
-git commit -m "feat(practica): panel de práctica integrado en la vista de canción
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "feat(practica): panel de práctica integrado en la vista de canción"
 ```
 
 ---
@@ -2926,7 +2901,5 @@ Rellena la tabla en los tres navegadores (✓ / ✗ con nota). Para iOS, prueba 
 
 ```bash
 git add docs/superpowers/checklists/2026-10-12-fase1-pruebas-manuales.md
-git commit -m "docs(practica): resultados de pruebas manuales de la fase 1
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "docs(practica): resultados de pruebas manuales de la fase 1"
 ```
