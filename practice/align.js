@@ -38,28 +38,15 @@ export function align(user, ref, { bandFrames }) {
   const band = Math.max(2, Math.ceil(bandFrames / 2));
   const lag = firstVoicedRun(u) - firstVoicedRun(r);
   const width = 2 * band + 1;
-  const D = new Float32Array(N * width).fill(Infinity);
+  // Solo se guardan dos filas de costes (anterior y actual); las direcciones sí
+  // ocupan N × width bytes para reconstruir el camino.
+  let prev = new Float32Array(width), cur = new Float32Array(width);
   const dir = new Uint8Array(N * width); // 0 inicio · 1 diagonal · 2 avanza usuario · 3 avanza referencia
   const at = (i, j) => {
     const k = j - (i - lag) + band;
     return k < 0 || k >= width ? -1 : i * width + k;
   };
   const P = ALIGN.stepPenalty;
-
-  for (let i = 0; i < N; i++) {
-    const lo = Math.max(0, i - lag - band), hi = Math.min(M - 1, i - lag + band);
-    for (let j = lo; j <= hi; j++) {
-      const idx = at(i, j);
-      const c = frameCost(u[i], r[j]);
-      if (j === 0) { D[idx] = c; dir[idx] = 0; continue; }
-      let best = Infinity, d = 0, k;
-      if (i > 0 && (k = at(i - 1, j - 1)) >= 0 && D[k] < best) { best = D[k]; d = 1; }
-      if (i > 0 && (k = at(i - 1, j)) >= 0 && D[k] + P < best) { best = D[k] + P; d = 2; }
-      if ((k = at(i, j - 1)) >= 0 && D[k] + P < best) { best = D[k] + P; d = 3; }
-      D[idx] = best + c;
-      dir[idx] = d;
-    }
-  }
 
   // Fin del camino. Candidato A: el mejor (i, M−1), la toma llega al final de la
   // referencia. Candidato B: el mejor (N−1, j), la toma se detuvo antes (Detener o
@@ -72,13 +59,31 @@ export function align(user, ref, { bandFrames }) {
   const tail = new Float64Array(M); // tail[j] = coste de dejar sin emparejar r[j+1..M−1]
   for (let j = M - 2; j >= 0; j--) tail[j] = tail[j + 1] + frameCost(null, r[j + 1]);
   let endI = -1, endJ = M - 1, endCost = Infinity;
+
+  prev.fill(Infinity);
   for (let i = 0; i < N; i++) {
-    const k = at(i, M - 1);
-    if (k >= 0 && D[k] < endCost) { endCost = D[k]; endI = i; }
+    cur.fill(Infinity);
+    const off = band - (i - lag); // columna en la fila = j + off
+    const lo = Math.max(0, i - lag - band), hi = Math.min(M - 1, i - lag + band);
+    for (let j = lo; j <= hi; j++) {
+      const k = j + off, idx = i * width + k;
+      const c = frameCost(u[i], r[j]);
+      if (j === 0) { cur[k] = c; dir[idx] = 0; continue; }
+      let best = Infinity, d = 0;
+      // (i−1, j−1) → misma columna; (i−1, j) → k+1; (i, j−1) → k−1
+      if (i > 0 && prev[k] < best) { best = prev[k]; d = 1; }
+      if (i > 0 && k + 1 < width && prev[k + 1] + P < best) { best = prev[k + 1] + P; d = 2; }
+      if (k > 0 && cur[k - 1] + P < best) { best = cur[k - 1] + P; d = 3; }
+      cur[k] = best + c;
+      dir[idx] = d;
+    }
+    const kEnd = M - 1 + off;
+    if (kEnd >= 0 && kEnd < width && cur[kEnd] < endCost) { endCost = cur[kEnd]; endI = i; }
+    if (i < N - 1) [prev, cur] = [cur, prev];
   }
   for (let j = 0; j < M - 1; j++) {
-    const k = at(N - 1, j);
-    if (k >= 0 && D[k] + tail[j] < endCost) { endCost = D[k] + tail[j]; endI = N - 1; endJ = j; }
+    const k = j + band - (N - 1 - lag);
+    if (k >= 0 && k < width && cur[k] + tail[j] < endCost) { endCost = cur[k] + tail[j]; endI = N - 1; endJ = j; }
   }
   if (endI < 0) return [];
 

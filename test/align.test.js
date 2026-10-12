@@ -77,3 +77,15 @@ test('si la toma llega al final de la referencia, el camino termina en el últim
   const path = align(user, ref, { bandFrames: 100 });
   assert.equal(path[path.length - 1][1], ref.length - 1);
 });
+
+test('entrada del tamaño de Adeste en modo prueba: camino completo y en poco tiempo', () => {
+  const ref = curve([].concat(...Array(25).fill(MELODY))); // 15 000 frames
+  const user = [...ref, ...Array(Math.round(ref.length * 0.3)).fill(null)];
+  const t0 = performance.now();
+  const path = align(user, ref, { bandFrames: Math.max(100, Math.round(ref.length * 0.15)) });
+  const ms = performance.now() - t0;
+  assert.ok(path.length > 0, 'camino vacío');
+  assert.equal(path[0][1], 0);
+  assert.equal(path[path.length - 1][1], ref.length - 1);
+  assert.ok(ms < 2000, `alineación en ${ms.toFixed(0)} ms`);
+});
