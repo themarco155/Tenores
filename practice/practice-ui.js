@@ -36,18 +36,29 @@ function ensurePanel() {
   body = panel.querySelector('.practice-body');
   titleEl = panel.querySelector('#practiceTitle');
   panel.addEventListener('click', e => { if (e.target.closest('[data-close]')) closePractice(); });
-  panel.addEventListener('keydown', onKeydown);
 }
 
+const focusablesIn = root => [...root.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled])')]
+  .filter(el => el.offsetParent !== null);
+
+// Escucha en `document` mientras el panel está abierto: cada render reemplaza el
+// contenido y el foco puede caer en <body>, donde el panel ya no recibiría teclas.
 function onKeydown(e) {
   if (e.key === 'Escape') { e.preventDefault(); closePractice(); return; }
   if (e.key !== 'Tab') return;
-  const focusables = [...sheet.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled])')]
-    .filter(el => el.offsetParent !== null);
-  if (!focusables.length) return;
+  const focusables = focusablesIn(sheet);
+  if (!focusables.length) { e.preventDefault(); sheet.focus(); return; }
   const first = focusables[0], last = focusables[focusables.length - 1];
-  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  const active = document.activeElement;
+  if (!sheet.contains(active) || active === sheet) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+  else if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+}
+
+// Tras cada render: foco en el primer control del contenido o, si no hay, en el panel.
+function focusBody() {
+  const target = focusablesIn(body)[0] || sheet;
+  target.focus({ preventScroll: true }); // sin saltar a mitad de los resultados
 }
 
 export async function openPractice(song) {
@@ -65,6 +76,7 @@ export async function openPractice(song) {
   titleEl.textContent = song.title;
   panel.hidden = false;
   document.body.classList.add('practice-panel-open');
+  document.addEventListener('keydown', onKeydown);
   sheet.focus();
   await loadReference();
 }
@@ -78,6 +90,7 @@ export function closePractice() {
   s.audio.load();
   s = null;
   panel.hidden = true;
+  document.removeEventListener('keydown', onKeydown);
   body.innerHTML = '';
   document.body.classList.remove('practice-panel-open');
   if (opener && document.contains(opener)) opener.focus();
@@ -161,12 +174,14 @@ async function loadReference() {
 
 function renderMessage(text) {
   body.innerHTML = `<p class="practice-message">${esc(text)}</p>`;
+  focusBody();
 }
 
 function renderError(text, retry) {
   body.innerHTML = `<div class="practice-error" role="alert"><p>${esc(text)}</p>
     <button type="button" class="btn small" data-retry>Reintentar</button></div>`;
   body.querySelector('[data-retry]').addEventListener('click', retry);
+  focusBody();
 }
 
 function micErrorMessage(err) {
@@ -224,10 +239,12 @@ function renderSetup() {
     form.querySelector('[data-range]').hidden = s.settings.range !== 'phrases';
   });
   form.addEventListener('submit', e => { e.preventDefault(); startTake(); });
+  focusBody();
 }
 
 function renderCountdown(big, hint) {
   body.innerHTML = `<div class="practice-countdown"><p class="practice-countdown__big">${esc(big)}</p><p>${esc(hint)}</p></div>`;
+  focusBody();
 }
 
 async function startTake() {
@@ -386,6 +403,7 @@ function renderResults(r) {
       renderSetup();
     }
   });
+  focusBody();
 }
 
 function toggleTake(btn) {
