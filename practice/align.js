@@ -61,15 +61,29 @@ export function align(user, ref, { bandFrames }) {
     }
   }
 
-  let endI = -1, endCost = Infinity;
+  // Fin del camino. Candidato A: el mejor (i, M−1), la toma llega al final de la
+  // referencia. Candidato B: el mejor (N−1, j), la toma se detuvo antes (Detener o
+  // corte del modo prueba). La cola de referencia que B deja sin emparejar se cobra
+  // como si se cantara en silencio: frameCost(null, r[j]) por frame, lo mismo que
+  // cuesta en el DTW un frame de referencia sin voz del usuario. Se elige B solo si
+  // es estrictamente más barato; así, cuando la toma cubre el rango, el resultado
+  // no cambia, y cuando se cortó no se comprimen las notas no cantadas sobre los
+  // últimos frames del usuario. Las notas tras el final quedan sin cantar.
+  const tail = new Float64Array(M); // tail[j] = coste de dejar sin emparejar r[j+1..M−1]
+  for (let j = M - 2; j >= 0; j--) tail[j] = tail[j + 1] + frameCost(null, r[j + 1]);
+  let endI = -1, endJ = M - 1, endCost = Infinity;
   for (let i = 0; i < N; i++) {
     const k = at(i, M - 1);
     if (k >= 0 && D[k] < endCost) { endCost = D[k]; endI = i; }
   }
+  for (let j = 0; j < M - 1; j++) {
+    const k = at(N - 1, j);
+    if (k >= 0 && D[k] + tail[j] < endCost) { endCost = D[k] + tail[j]; endI = N - 1; endJ = j; }
+  }
   if (endI < 0) return [];
 
   const cells = [];
-  let i = endI, j = M - 1;
+  let i = endI, j = endJ;
   for (;;) {
     cells.push([i, j]);
     const d = dir[at(i, j)];

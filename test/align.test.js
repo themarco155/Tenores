@@ -59,3 +59,21 @@ test('una nota final que cae no se comprime sobre pocos frames del usuario', () 
   const used = new Set(path.filter(([, r]) => r >= 485 && r < 577).map(([u]) => u));
   assert.ok(used.size >= 70, `solo ${used.size} frames de usuario`);
 });
+
+test('toma cortada al 80 % (modo prueba): el camino no está vacío y acaba en el último frame del usuario', () => {
+  const ref = curve(MELODY).slice(0, 580);
+  const user = ref.slice(0, 480);
+  const path = align(user, ref, { bandFrames: Math.max(100, Math.round(ref.length * 0.15)) });
+  assert.ok(path.length > 0, 'camino vacío');
+  const [lastU, lastR] = path[path.length - 1];
+  assert.equal(lastU, user.length - 1);
+  assert.ok(Math.abs(lastR - 479) <= 4, `termina en la referencia ${lastR}`);
+  assert.equal(path[0][1], 0);
+});
+
+test('si la toma llega al final de la referencia, el camino termina en el último frame de referencia', () => {
+  const ref = curve(MELODY).slice(0, 580);
+  const user = [...ref.slice(0, 560), ...Array(10).fill(null)];
+  const path = align(user, ref, { bandFrames: 100 });
+  assert.equal(path[path.length - 1][1], ref.length - 1);
+});

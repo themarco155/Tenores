@@ -75,3 +75,27 @@ test('frases en segundos absolutos y curvas para la gráfica', () => {
   assert.equal(r.curves.ref.length, r.curves.user.length);
   assert.equal(r.curves.hopMs, 10);
 });
+
+test('toma cortada al 80 % en modo prueba → válida y la última frase en parte sin cantar', () => {
+  const r = runScore(curve(MELODY).slice(0, 480), 'test');
+  assert.equal(r.valid, true);
+  assert.ok(r.coverage >= 0.5 && r.coverage < 0.9, `cobertura ${r.coverage}`);
+  const last = r.phrases[r.phrases.length - 1];
+  assert.ok(last.coverage > 0 && last.coverage < 1, `cobertura última frase ${last.coverage}`);
+  assert.ok(r.phrases[0].coverage === 1 && r.phrases[1].coverage === 1);
+  assert.ok(r.tips.length <= 3);
+});
+
+test('toma cortada al 97 % en modo guía (canción larga) → válida y la última frase en parte sin cantar', () => {
+  const long = curve([].concat(...Array(6).fill(MELODY)));
+  const ref = referenceFromCurve({ songId: 'larga', midi: long });
+  const full = sliceReference(ref, 1, ref.phrases.length).midi;
+  const user = full.slice(0, Math.round(full.length * 0.97));
+  assert.ok(full.length - user.length > 100, 'el corte debe superar la banda del modo guía');
+  const r = runScore(user, 'guide', 1, ref.phrases.length, ref);
+  assert.equal(r.valid, true);
+  assert.ok(r.coverage >= 0.9, `cobertura ${r.coverage}`);
+  const last = r.phrases[r.phrases.length - 1];
+  assert.ok(last.coverage > 0 && last.coverage < 1, `cobertura última frase ${last.coverage}`);
+  assert.ok(r.scores.rhythm >= 90, `ritmo ${r.scores.rhythm}`);
+});
