@@ -1,4 +1,5 @@
 import { SCORING } from './scoring-config.js';
+import { buildTips } from './tips.js';
 import { lin, median, mean, weightedMean, round2 } from './util.js';
 
 export { SCORING };
@@ -114,7 +115,7 @@ export function score(user, slice, path, mode) {
     stability: roundOrNull(agg.stability),
   };
   const valid = agg.coverage >= SCORING.minCoverage;
-  const tips = [];
+  const tips = valid ? buildTips({ notes, phrases: slice.phrases, phraseResults: phrases, scores, hopMs }) : [];
   const userCurve = byRef.map(us => {
     const m = median(us.map(u => user[u]));
     return m == null ? null : round2(m);
