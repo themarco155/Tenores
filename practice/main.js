@@ -35,7 +35,7 @@ function syncButton() {
   const supported = isRecordingSupported();
   btn.hidden = false;
   btn.disabled = !supported;
-  btn.textContent = supported ? 'Practicar' : 'Grabar no disponible';
+  btn.textContent = supported ? 'Practicar' : 'Tu navegador no permite grabar';
   btn.title = supported ? 'Grábate y compárate con la referencia' : 'Tu navegador no permite grabar';
 }
 

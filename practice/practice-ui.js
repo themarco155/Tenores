@@ -10,6 +10,7 @@ const METRICS = [['pitch', 'Afinación'], ['rhythm', 'Ritmo y entradas'], ['stab
 
 let panel = null, sheet = null, body = null, titleEl = null, opener = null;
 let s = null; // sesión de práctica abierta
+let seq = 0; // contador global: los tokens nunca se reutilizan entre sesiones
 
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const band = v => (v == null ? 'none' : v >= 80 ? 'good' : v >= 60 ? 'warn' : 'bad');
@@ -56,7 +57,7 @@ export async function openPractice(song) {
   const audio = new Audio(song.track);
   audio.preload = 'auto';
   s = {
-    song, audio, token: 0, ref: null, recorder: null, timers: new Set(), raf: 0,
+    song, audio, token: ++seq, ref: null, recorder: null, timers: new Set(), raf: 0,
     take: null, takeSource: null, refStop: null, finished: -1,
     settings: { mode: 'guide', range: 'full', phraseFrom: 1, phraseTo: 1 },
   };
@@ -82,7 +83,7 @@ export function closePractice() {
 }
 
 function cancelFlow() {
-  s.token++;
+  s.token = ++seq;
   for (const t of s.timers) clearTimeout(t);
   s.timers.clear();
   cancelAnimationFrame(s.raf);
