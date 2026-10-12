@@ -87,7 +87,7 @@ body.practice-panel-open { overflow: hidden; }
 
 @media (max-width: 640px) {
   .practice-panel { padding: 0; }
-  .practice-panel__sheet { border-radius: 0; max-height: 100vh; height: 100vh; padding: 20px 16px; }
+  .practice-panel__sheet { border-radius: 0; height: 100vh; max-height: 100vh; height: 100dvh; max-height: 100dvh; padding: 20px 16px; }
   .practice-metrics { grid-template-columns: 1fr; }
   .practice-score__value { font-size: 44px; }
 }
