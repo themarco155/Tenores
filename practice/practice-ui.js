@@ -3,6 +3,7 @@ import { playTone, playClick } from './tones.js';
 import { runAnalysis } from './analysis-client.js';
 import { renderChart } from './chart.js';
 import { formatTime } from './util.js';
+import { mountSaveStatus } from './save-status.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
@@ -366,6 +367,7 @@ function renderResults(r) {
         <span class="practice-score__value">${r.scores.total}</span><span class="practice-score__label">Puntuación</span></div>
       <ul class="practice-metrics">${METRICS.map(([k, label]) =>
         `<li class="score--${band(r.scores[k])}"><span>${label}</span><strong>${r.scores[k] ?? '—'}</strong></li>`).join('')}</ul>
+      <p class="practice-save" data-save aria-live="polite"></p>
       ${r.tips.length ? `<h3 class="practice-subtitle">Qué mejorar</h3><ul class="practice-tips">${r.tips.map(t => `<li>${esc(t.text)}</li>`).join('')}</ul>` : ''}
       <div class="practice-chart-wrap">${renderChart(r.curves, r.phrases)}
         <p class="practice-legend"><span class="legend-ref">Referencia</span><span class="legend-user">Tu voz</span></p></div>
@@ -383,6 +385,7 @@ function renderResults(r) {
       </div></div>`;
   }
   let selected = null;
+  if (r.valid) mountSaveStatus(body.querySelector('[data-save]'), r);
   body.firstElementChild.addEventListener('click', e => {
     const phrase = e.target.closest('[data-phrase]');
     if (phrase) {
