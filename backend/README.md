@@ -103,3 +103,21 @@ El plan gratuito de Workers limita el tiempo de CPU por petición. El hash del P
 ```bash
 npx wrangler d1 export tenores --remote --output copia-tenores.sql
 ```
+
+## Canciones
+
+Las canciones viven en la tabla `songs` (migración `0002_songs.sql`, que carga las 12 originales). Se gestionan
+desde **Administración → Canciones**: crear, editar, subir/bajar, desactivar y reactivar.
+
+- El audio se pega como enlace `https://` (por ejemplo, de Cloudinary). Al guardar, tu navegador descarga el audio
+  y calcula la referencia de notas para la práctica; tarda unos segundos.
+- Una canción sin enlace muestra solo la letra.
+- Si cambias el audio, los intentos anteriores se conservan y siguen contando en el ranking.
+- El sitio guarda la última lista en el navegador y usa las 12 canciones incluidas en `app.js` si el backend no
+  responde.
+
+**Al desplegar esta versión:** aplica la migración (`npm run db:migrate:remote`) y publica el Worker **antes** de
+publicar el sitio nuevo.
+
+Para regenerar `0002_songs.sql` (solo si se cambian las canciones de `app.js` antes del primer despliegue):
+`node tools/build-songs-migration.mjs`.

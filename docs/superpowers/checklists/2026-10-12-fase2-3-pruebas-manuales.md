@@ -17,3 +17,9 @@ Entorno local: `npm run serve` (raíz) + `cd backend && npm run dev`.
 | 11 | Editar, desactivar, reactivar, restablecer PIN y eliminar usuario | | |
 | 12 | Un tenor no ve "Administración"; Esc y Tab en todos los diálogos | | |
 | 13 | Móvil: diálogos a pantalla completa, teclado numérico en el PIN | | |
+| 14 | Canciones: crear una solo con letra → sale en la portada sin reproductor ni "Practicar" | | |
+| 15 | Canciones: añadirle el enlace del audio → "Descargando…/Analizando…" → se puede practicar y guardar | | |
+| 16 | Canciones: Subir/Bajar cambia el orden de la portada (números 01, 02…) | | |
+| 17 | Canciones: enlace roto → "No se pudo descargar el audio…" y no se guarda nada | | |
+| 18 | Canciones: desactivar → desaparece de la portada y de práctica; sigue en "Mi progreso" con su título | | |
+| 19 | Canciones: backend apagado → la portada muestra la última lista guardada | | |
