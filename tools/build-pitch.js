@@ -1,4 +1,5 @@
 import { buildReference } from '../practice/reference.js';
+import { mixDown } from '../practice/reference-builder.js';
 import { renderChart } from '../practice/chart.js';
 import { parseSongs } from './songs-parser.js';
 
@@ -8,15 +9,6 @@ const $all = document.getElementById('all');
 const $save = document.getElementById('save');
 const $preview = document.getElementById('preview');
 let songs = [];
-
-function mixDown(buffer) {
-  const out = new Float32Array(buffer.length);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const ch = buffer.getChannelData(c);
-    for (let i = 0; i < out.length; i++) out[i] += ch[i] / buffer.numberOfChannels;
-  }
-  return out;
-}
 
 function download(name, data) {
   const a = document.createElement('a');

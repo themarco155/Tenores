@@ -2,11 +2,12 @@ import { api } from './api.js';
 import { openSheet, focusFirst } from './sheet.js';
 import { renderProgress } from './progress-ui.js';
 import { getSession } from './session.js';
-import { esc, trendSymbol, daysSince, sinceFor, formatDate, songTitle } from './format.js';
+import { esc, trendSymbol, daysSince, sinceFor, formatDate } from './format.js';
+import { getSongs, refreshSongs, moveInOrder } from './songs.js';
+import { referenceFromUrl } from './reference-builder.js';
 
-const TABS = [['team', 'Equipo'], ['ranking', 'Ranking'], ['users', 'Usuarios']];
+const TABS = [['team', 'Equipo'], ['ranking', 'Ranking'], ['users', 'Usuarios'], ['songs', 'Canciones']];
 const INACTIVE_DAYS = 14;
-const SONG_IDS = ['fum', 'adeste', 'dona', 'fuentecilla', 'campanas', 'estrella', 'paz', 'merry', 'kling', 'tannenbaum', 'mundo', 'stelle'];
 
 // Estado del panel abierto. Cada vista se pinta en un contenedor nuevo (freshView) para que
 // los listeners de una vista anterior no se acumulen ni reciban clics de la siguiente.
@@ -28,7 +29,7 @@ function showError(container, err, retry) {
 
 export function openAdmin() {
   const sheet = openSheet({ title: 'Administración', eyebrow: 'Jefe de cuerda', wide: true, onClose: () => { state = null; } });
-  state = { sheet, tab: 'team', usersFilter: '1', rankingSong: 'all', rankingPeriod: 'season' };
+  state = { sheet, tab: 'team', usersFilter: '1', songsFilter: '1', focusSong: null, rankingSong: 'all', rankingPeriod: 'season' };
   sheet.body.innerHTML = `<div class="admin-tabs" role="tablist">${TABS.map(([id, label]) =>
     `<button type="button" role="tab" class="data-tab" data-tab="${id}" aria-selected="false">${label}</button>`).join('')}</div>
     <div class="admin-view" role="tabpanel"></div>`;
@@ -59,6 +60,7 @@ function showTab(tab) {
   const view = freshView();
   if (tab === 'team') renderTeam(view);
   else if (tab === 'ranking') renderRanking(view);
+  else if (tab === 'songs') renderSongs(view);
   else renderUsers(view);
 }
 
@@ -100,7 +102,7 @@ async function renderTeam(view) {
 async function renderRanking(view) {
   const { rankingSong: song, rankingPeriod: period } = state;
   view.innerHTML = `<div class="admin-filters">
-      <label>Canción <select data-song><option value="all">General</option>${SONG_IDS.map(id => `<option value="${id}">${esc(songTitle(id))}</option>`).join('')}</select></label>
+      <label>Canción <select data-song><option value="all">General</option>${getSongs().map(s => `<option value="${esc(s.id)}">${esc(s.title)}${s.active ? '' : ' (inactiva)'}</option>`).join('')}</select></label>
       <label>Periodo <select data-period><option value="7d">7 días</option><option value="30d">30 días</option><option value="season">Temporada</option></select></label>
     </div>
     <p class="admin-note">Solo cuentan canciones completas en modo "Ponerme a prueba".</p>
@@ -174,14 +176,18 @@ function alertSheet(err) {
   focusFirst(s.body);
 }
 
-const FIELD_NAMES = { username: 'el usuario', displayName: 'el nombre', role: 'el rol', confirmUsername: 'la confirmación' };
+const FIELD_NAMES = { username: 'el usuario', displayName: 'el nombre', role: 'el rol', confirmUsername: 'la confirmación', title: 'el título', track: 'el enlace del audio', lyrics: 'la letra' };
+
+function showFormError(form, message, field) {
+  const el = form.querySelector('[data-error]');
+  el.textContent = message;
+  el.hidden = false;
+  if (field && form.elements[field]) form.elements[field].focus();
+}
 
 function formError(form, err) {
-  const el = form.querySelector('[data-error]');
-  el.textContent = err.code === 'invalid' && err.field ? `Revisa ${FIELD_NAMES[err.field] || 'los datos'}.` : err.message;
-  el.hidden = false;
-  const field = err.code === 'username_taken' ? 'username' : err.field;
-  if (field && form.elements[field]) form.elements[field].focus();
+  const field = err.code === 'username_taken' ? 'username' : err.code === 'title_taken' ? 'title' : err.field;
+  showFormError(form, err.code === 'invalid' && err.field ? `Revisa ${FIELD_NAMES[err.field] || 'los datos'}.` : err.message, field);
 }
 
 function showPin(user, pin, intro) {
@@ -300,6 +306,155 @@ function confirmDelete(user) {
       await api.admin.deleteUser(user.id, form.elements.confirmUsername.value);
       s.close();
       reloadTab();
+    },
+  });
+}
+
+// ---------- Canciones ----------
+const afterSongChange = () => { refreshSongs(); reloadTab(); };
+
+async function renderSongs(view) {
+  view.innerHTML = `<div class="admin-filters">
+      <label>Mostrar <select data-filter><option value="1">Activas</option><option value="0">Inactivas</option><option value="all">Todas</option></select></label>
+      <button type="button" class="btn small" data-new>Nueva canción</button>
+    </div><div data-list><p class="practice-message">Cargando…</p></div>`;
+  const filterSel = view.querySelector('[data-filter]');
+  filterSel.value = state.songsFilter;
+  filterSel.addEventListener('change', () => { state.songsFilter = filterSel.value; reloadTab(); });
+  view.querySelector('[data-new]').addEventListener('click', () => songForm(null));
+  const list = view.querySelector('[data-list]');
+  let data;
+  try { data = await api.admin.songs('all'); } catch (err) { showError(list, err, reloadTab); return; }
+  const all = data.songs; // en orden de portada
+  const shown = all.filter(s => state.songsFilter === 'all' || String(Number(s.active)) === state.songsFilter);
+  if (!shown.length) { list.innerHTML = '<p class="practice-message">No hay canciones en esta lista.</p>'; return; }
+  const number = new Map(all.filter(s => s.active).map((s, i) => [s.id, String(i + 1).padStart(2, '0')]));
+  list.innerHTML = `<div class="admin-table-wrap"><table class="admin-table">
+    <thead><tr><th>#</th><th>Título</th><th>Audio</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>${shown.map((s, k) => `<tr data-id="${esc(s.id)}">
+      <td>${number.get(s.id) || '—'}</td>
+      <td>${esc(s.title)}</td>
+      <td>${s.track ? 'Sí' : 'No'}</td>
+      <td>${s.active ? 'Activa' : 'Inactiva'}</td>
+      <td class="admin-actions">
+        <button type="button" class="btn small quiet" data-act="up" aria-label="Subir ${esc(s.title)}"${k === 0 ? ' disabled' : ''}>Subir</button>
+        <button type="button" class="btn small quiet" data-act="down" aria-label="Bajar ${esc(s.title)}"${k === shown.length - 1 ? ' disabled' : ''}>Bajar</button>
+        <button type="button" class="btn small quiet" data-act="edit">Editar</button>
+        <button type="button" class="btn small quiet" data-act="${s.active ? 'deactivate' : 'reactivate'}">${s.active ? 'Desactivar' : 'Reactivar'}</button>
+      </td></tr>`).join('')}</tbody></table></div>`;
+  const byId = new Map(all.map(s => [s.id, s]));
+  list.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-act]');
+    if (!btn || btn.disabled) return;
+    const song = byId.get(btn.closest('tr').dataset.id);
+    const act = btn.dataset.act;
+    if (act === 'up' || act === 'down') {
+      btn.disabled = true;
+      const ids = moveInOrder(all.map(s => s.id), shown.map(s => s.id), song.id, act === 'up' ? -1 : 1);
+      try {
+        await api.admin.reorderSongs(ids);
+        state.focusSong = { id: song.id, act };
+        afterSongChange();
+      } catch (err) { btn.disabled = false; alertSheet(err); }
+    } else if (act === 'edit') songForm(song);
+    else if (act === 'deactivate') confirmDeactivateSong(song);
+    else if (act === 'reactivate') api.admin.updateSong(song.id, { active: true }).then(afterSongChange, alertSheet);
+  });
+  // Tras Subir/Bajar se repinta la tabla: el foco vuelve al mismo botón de la misma canción.
+  const focus = state.focusSong;
+  state.focusSong = null;
+  const target = focus && [...list.querySelectorAll('tr[data-id]')].find(tr => tr.dataset.id === focus.id)?.querySelector(`[data-act="${focus.act}"]`);
+  if (target && !target.disabled) target.focus(); else focusFirst(view);
+}
+
+function songForm(song) {
+  let current = song; // tras crear, el formulario pasa a editar esa canción (para reintentar sin duplicar)
+  let pendingRef = null; // referencia calculada que no se pudo subir
+  const s = openSheet({ title: song ? 'Editar canción' : 'Nueva canción', eyebrow: 'Administración', wide: true });
+  s.body.innerHTML = `<form class="account-form" novalidate>
+    <label>Título<input name="title" maxlength="80" required value="${song ? esc(song.title) : ''}"></label>
+    <label>Enlace del audio<input name="track" type="url" inputmode="url" maxlength="500" autocapitalize="none" spellcheck="false" placeholder="https://res.cloudinary.com/…" value="${song && song.track ? esc(song.track) : ''}"></label>
+    <p class="admin-note">Opcional. Sin audio, la canción muestra solo la letra y no se puede practicar.</p>
+    <label>Letra<textarea name="lyrics" rows="12" maxlength="20000">${song ? esc(song.lyrics) : ''}</textarea></label>
+    <p class="admin-note" data-stage aria-live="polite" hidden></p>
+    <p class="account-form__error" role="alert" data-error hidden></p>
+    <button type="submit" class="btn">${song ? 'Guardar cambios' : 'Crear canción'}</button>
+  </form>`;
+  const form = s.body.querySelector('form');
+  const stage = form.querySelector('[data-stage]');
+  const button = form.querySelector('button[type=submit]');
+  const say = text => { stage.textContent = text; stage.hidden = !text; };
+  const fail = (message, field) => { say(''); showFormError(form, message, field); button.disabled = false; };
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    form.querySelector('[data-error]').hidden = true;
+    const title = form.elements.title.value.trim();
+    const track = form.elements.track.value.trim() || null;
+    const lyrics = form.elements.lyrics.value;
+    if (!title) return showFormError(form, 'Escribe el título.', 'title');
+    if (track && !/^https:\/\//i.test(track)) return showFormError(form, 'El enlace debe empezar por https://', 'track');
+    button.disabled = true;
+
+    // 1. Si el audio es nuevo, se analiza antes de guardar nada.
+    const oldTrack = current?.track || null;
+    let ref = null;
+    if (track && (track !== oldTrack || (pendingRef && pendingRef.source === track))) {
+      if (pendingRef && pendingRef.source === track) ref = pendingRef;
+      else {
+        try {
+          ref = await referenceFromUrl(current?.id || 'nueva', track, { onStage: st => say(st === 'download' ? 'Descargando audio…' : 'Analizando audio…') });
+        } catch (err) { return fail(err.message, 'track'); }
+      }
+    }
+
+    // 2. Datos de la canción.
+    say('Guardando…');
+    try {
+      if (current) {
+        const changes = {};
+        if (title !== current.title) changes.title = title;
+        if (track !== oldTrack) changes.track = track;
+        if (lyrics !== current.lyrics) changes.lyrics = lyrics;
+        if (Object.keys(changes).length) current = (await api.admin.updateSong(current.id, changes)).song;
+      } else {
+        current = (await api.admin.createSong({ title, track, lyrics })).song;
+      }
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      say('');
+      formError(form, err);
+      button.disabled = false;
+      return;
+    }
+
+    // 3. Referencia de notas.
+    if (ref) {
+      try {
+        await api.admin.putSongReference(current.id, { ...ref, songId: current.id });
+        pendingRef = null;
+      } catch (err) {
+        if (handleAuthError(err)) return;
+        pendingRef = ref;
+        refreshSongs();
+        return fail('Se guardó la canción pero no su referencia. Vuelve a guardar para reintentarlo.', 'track');
+      }
+    }
+    s.close();
+    afterSongChange();
+  });
+  focusFirst(form);
+}
+
+function confirmDeactivateSong(song) {
+  confirmSheet({
+    title: 'Desactivar canción',
+    html: `<p><strong>${esc(song.title)}</strong> no aparecerá en el sitio ni en práctica. Su historial se conserva y puedes reactivarla cuando quieras.</p>`,
+    confirmLabel: 'Desactivar',
+    onConfirm: async (form, s) => {
+      await api.admin.updateSong(song.id, { active: false });
+      s.close();
+      afterSongChange();
     },
   });
 }
