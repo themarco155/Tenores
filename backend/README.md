@@ -25,3 +25,79 @@ Abre http://127.0.0.1:8000, menú ☰ → **Práctica → Entrar**, usa `admin` 
 Tests del backend: `cd backend && npm test`. Tests del motor y del frontend: `npm test` en la raíz.
 
 Para empezar de cero en local: borra la carpeta `backend/.wrangler/` y repite desde `npm run db:migrate:local`.
+
+## Despliegue en Cloudflare y GitHub Pages
+
+### 1. Cuenta y sesión de Wrangler
+
+Crea una cuenta gratuita en https://dash.cloudflare.com/sign-up y, desde `backend/`:
+
+```bash
+npx wrangler login        # abre el navegador para autorizar
+```
+
+### 2. Base de datos D1
+
+```bash
+npx wrangler d1 create tenores
+```
+
+Copia el `database_id` que imprime y sustitúyelo en `wrangler.toml` (línea `database_id = ...`). Después:
+
+```bash
+npm run db:migrate:remote
+```
+
+### 3. Orígenes permitidos
+
+En `wrangler.toml`, añade a `ALLOWED_ORIGINS` el origen de tu GitHub Pages. El origen es solo esquema y dominio, **sin** la ruta del repositorio:
+
+```toml
+ALLOWED_ORIGINS = "https://TU-USUARIO.github.io,http://127.0.0.1:8000,http://localhost:*"
+```
+
+### 4. Publicar el Worker
+
+```bash
+npm run deploy
+```
+
+Wrangler imprime la URL, del estilo `https://tenores-api.TU-SUBDOMINIO.workers.dev`. Compruébala:
+
+```bash
+curl https://tenores-api.TU-SUBDOMINIO.workers.dev/api/health   # {"ok":true}
+```
+
+### 5. Primer administrador en producción
+
+```bash
+node tools/create-admin.mjs tu.usuario "Tu nombre"
+npx wrangler d1 execute tenores --remote --file admin-seed.sql
+rm admin-seed.sql
+```
+
+Guarda el PIN temporal que imprime: lo cambiarás en el primer acceso.
+
+### 6. Conectar la web
+
+En `practice/config.js`, pon la URL del Worker:
+
+```js
+export const PRODUCTION_API = 'https://tenores-api.TU-SUBDOMINIO.workers.dev';
+```
+
+Haz commit, sube el repositorio a GitHub y activa **Settings → Pages → Deploy from a branch → main / (root)**.
+
+### 7. Comprobar
+
+Abre tu web en GitHub Pages → menú ☰ → **Práctica → Entrar** con el administrador → elige tu PIN → **Administración → Usuarios → Nuevo usuario** para cada tenor.
+
+### Límite de CPU del plan gratuito
+
+El plan gratuito de Workers limita el tiempo de CPU por petición. El hash del PIN usa 20 000 iteraciones (`PIN_ITERATIONS`), pensado para caber holgadamente. Si al entrar ves errores 1102 o "Worker exceeded CPU time limit" en `npx wrangler tail`, baja `PIN_ITERATIONS` en `wrangler.toml` (mínimo 10 000) y vuelve a desplegar; los PIN existentes siguen funcionando porque cada usuario guarda sus propias iteraciones, y se actualizan al cambiar o restablecer el PIN.
+
+### Copias de seguridad
+
+```bash
+npx wrangler d1 export tenores --remote --output copia-tenores.sql
+```
