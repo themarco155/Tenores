@@ -11,7 +11,7 @@
 body.practice-panel-open { overflow: hidden; }
 .practice-open-btn { margin-left: auto; }
 
-.practice-panel { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.practice-panel { position: fixed; inset: 0; z-index: 96; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
 .practice-panel[hidden] { display: none; }
 .practice-panel__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .72); }
 .practice-panel__sheet {
@@ -94,7 +94,7 @@ body.practice-panel-open { overflow: hidden; }
 
 /* ---------- Diálogos de cuenta, progreso y administración ---------- */
 body.tsheet-open { overflow: hidden; }
-.tsheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.tsheet { position: fixed; inset: 0; z-index: 97; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
 .tsheet__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .72); }
 .tsheet__panel {
   position: relative; width: min(480px, 100%); max-height: calc(100vh - 48px); overflow-y: auto;
