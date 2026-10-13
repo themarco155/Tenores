@@ -29,10 +29,9 @@ export function mountPracticeMenu({ onProgress, onAdmin }) {
   };
 
   // app.js cierra el menú al pulsar cualquier .quick-menu__item; aquí solo se ejecuta la acción.
-  contents.addEventListener('click', async e => {
-    const btn = e.target.closest('[data-practice-action]');
-    if (!btn) return;
-    const action = btn.dataset.practiceAction;
+  // Se difiere con setTimeout: el handler de app.js sobre #quickMenu oculta el menú y devuelve el foco
+  // al botón ☰ en este mismo clic; así el diálogo se abre después y su opener es #menuToggle.
+  const run = async action => {
     if (action === 'login') { if (await openLogin()) onProgress(); }
     else if (action === 'pin') openPinChange();
     else if (action === 'progress') onProgress();
@@ -41,6 +40,12 @@ export function mountPracticeMenu({ onProgress, onAdmin }) {
       try { await api.logout(); } catch { /* la sesión se borra igualmente */ }
       clearSession();
     }
+  };
+  contents.addEventListener('click', e => {
+    const btn = e.target.closest('[data-practice-action]');
+    if (!btn) return;
+    const action = btn.dataset.practiceAction;
+    setTimeout(() => run(action), 0);
   });
 
   render(getSession());
