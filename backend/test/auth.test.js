@@ -57,6 +57,16 @@ test('5 fallos bloquean 15 minutos y el éxito limpia el contador', async () => 
   assert.equal(await t.db.prepare('SELECT COUNT(*) AS n FROM login_failures').first('n'), 0);
 });
 
+test('10 logins erróneos simultáneos también bloquean la cuenta', async () => {
+  const t = setup();
+  await t.seedUser();
+  const bad = () => t.call('POST', '/api/auth/login', { body: { username: 'ana', pin: '999999' } });
+  const results = await Promise.all(Array.from({ length: 10 }, bad));
+  assert.ok(results.every(r => r.status === 401 || r.status === 429));
+  const blocked = await t.call('POST', '/api/auth/login', { body: { username: 'ana', pin: '123456' } });
+  assert.deepEqual([blocked.status, blocked.body.error], [429, 'locked']);
+});
+
 test('GET /api/me con y sin token', async () => {
   const t = setup();
   await t.seedUser();

@@ -17,10 +17,20 @@ function lockedError(until, now) {
   return new HttpError(429, 'locked', { retryAfter: Math.max(1, Math.ceil((new Date(until) - now) / 1000)) });
 }
 
-async function saveFailure(db, username, count, lockedUntil) {
-  await db.prepare(`INSERT INTO login_failures (username, failed_count, locked_until) VALUES (?, ?, ?)
-    ON CONFLICT(username) DO UPDATE SET failed_count = excluded.failed_count, locked_until = excluded.locked_until`)
-    .bind(username, count, lockedUntil).run();
+// Cuenta el intento ANTES de comprobar el PIN y de forma atómica, para que las
+// peticiones simultáneas no puedan saltarse el bloqueo. Mientras dure un bloqueo
+// el contador no avanza.
+async function countAttempt(db, username, now) {
+  return db.prepare(`INSERT INTO login_failures (username, failed_count, locked_until) VALUES (?1, 1, NULL)
+    ON CONFLICT(username) DO UPDATE SET failed_count = CASE WHEN locked_until > ?2 THEN failed_count ELSE failed_count + 1 END
+    RETURNING failed_count, locked_until`)
+    .bind(username, now.toISOString()).first();
+}
+
+async function lock(db, username, now) {
+  const until = new Date(now.getTime() + LOCK_MINUTES * 60_000).toISOString();
+  await db.prepare('UPDATE login_failures SET failed_count = 0, locked_until = ? WHERE username = ?').bind(until, username).run();
+  return lockedError(until, now);
 }
 
 export async function createSession(db, userId, now) {
@@ -39,8 +49,9 @@ export async function login(ctx) {
   if (!username) throw new HttpError(400, 'invalid', { field: 'username' });
   if (!pin) throw new HttpError(400, 'invalid', { field: 'pin' });
 
-  const failure = await db.prepare('SELECT failed_count, locked_until FROM login_failures WHERE username = ?').bind(username).first();
-  if (failure?.locked_until && new Date(failure.locked_until) > now) throw lockedError(failure.locked_until, now);
+  const failure = await countAttempt(db, username, now);
+  if (failure.locked_until && new Date(failure.locked_until) > now) throw lockedError(failure.locked_until, now);
+  if (failure.failed_count > MAX_FAILURES) throw await lock(db, username, now);
 
   const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
   let ok = false;
@@ -48,13 +59,7 @@ export async function login(ctx) {
   else await hashPin(pin, DUMMY_SALT, pinIterations(env)); // tiempo de respuesta similar
 
   if (!ok || !user.active) {
-    const count = (failure?.failed_count ?? 0) + 1;
-    if (count >= MAX_FAILURES) {
-      const until = new Date(now.getTime() + LOCK_MINUTES * 60_000).toISOString();
-      await saveFailure(db, username, 0, until);
-      throw lockedError(until, now);
-    }
-    await saveFailure(db, username, count, failure?.locked_until ?? null);
+    if (failure.failed_count >= MAX_FAILURES) throw await lock(db, username, now);
     throw new HttpError(401, 'invalid_credentials');
   }
 
