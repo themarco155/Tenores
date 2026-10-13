@@ -4,9 +4,14 @@ import { MELODY, curve, shift, ramp, runScore } from './helpers/melody.js';
 
 const kinds = r => r.tips.map(t => t.kind);
 
-test('curva idéntica → un único consejo de felicitación', () => {
-  const r = runScore(curve(MELODY));
+test('curva idéntica con guía → felicita y sugiere ponerse a prueba', () => {
+  const r = runScore(curve(MELODY), 'guide');
   assert.deepEqual(r.tips, [{ kind: 'praise', phrase: null, text: "¡Muy bien! Prueba el modo 'Ponerme a prueba'." }]);
+});
+
+test('curva idéntica a prueba → felicita sin sugerir el modo en el que ya está', () => {
+  const r = runScore(curve(MELODY), 'test');
+  assert.deepEqual(r.tips, [{ kind: 'praise', phrase: null, text: '¡Muy bien! Sigue así.' }]);
 });
 
 test('+50 cents → consejos pitch-bias que dicen "alto"', () => {

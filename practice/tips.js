@@ -4,7 +4,7 @@ import { lin, median, mean, formatTime } from './util.js';
 const round5 = x => Math.round(x / 5) * 5;
 const seconds = ms => (Math.abs(ms) / 1000).toFixed(1).replace('.', ',');
 
-export function buildTips({ notes, phrases, phraseResults, scores, hopMs }) {
+export function buildTips({ notes, phrases, phraseResults, scores, hopMs, mode }) {
   const T = SCORING.tips;
   const sec = frames => (frames * hopMs) / 1000;
   const candidates = [];
@@ -68,7 +68,8 @@ export function buildTips({ notes, phrases, phraseResults, scores, hopMs }) {
   candidates.sort((a, b) => b.priority - a.priority);
   const tips = candidates.slice(0, T.max).map(({ kind, phrase, text }) => ({ kind, phrase, text }));
   if (!tips.length && scores.total >= T.praiseTotal) {
-    tips.push({ kind: 'praise', phrase: null, text: "¡Muy bien! Prueba el modo 'Ponerme a prueba'." });
+    const text = mode === 'guide' ? "¡Muy bien! Prueba el modo 'Ponerme a prueba'." : '¡Muy bien! Sigue así.';
+    tips.push({ kind: 'praise', phrase: null, text });
   }
   return tips;
 }

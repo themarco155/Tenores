@@ -115,7 +115,7 @@ export function score(user, slice, path, mode) {
     stability: roundOrNull(agg.stability),
   };
   const valid = agg.coverage >= SCORING.minCoverage;
-  const tips = valid ? buildTips({ notes, phrases: slice.phrases, phraseResults: phrases, scores, hopMs }) : [];
+  const tips = valid ? buildTips({ notes, phrases: slice.phrases, phraseResults: phrases, scores, hopMs, mode }) : [];
   const userCurve = byRef.map(us => {
     const m = median(us.map(u => user[u]));
     return m == null ? null : round2(m);
