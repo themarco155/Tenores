@@ -42,7 +42,8 @@ CREATE TABLE songs (
   lyrics      TEXT NOT NULL DEFAULT '',
   position    INTEGER NOT NULL,              -- orden de la portada (1 = primera)
   active      INTEGER NOT NULL DEFAULT 1,
-  reference   TEXT,                          -- JSON de referencia; NULL = usar assets/pitch/<id>.json si existe
+  legacy_reference INTEGER NOT NULL DEFAULT 0, -- 1 = vale assets/pitch/<id>.json (las 12 migradas)
+  reference   TEXT,                          -- JSON de referencia calculado desde el panel
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
@@ -51,7 +52,7 @@ CREATE UNIQUE INDEX songs_title ON songs(title COLLATE NOCASE);
 
 - La migración inserta las 12 canciones actuales con título, enlace y letra copiados de `SONGS` en `app.js`, y
   `position` según el orden de las tarjetas de `index.html` (Fum Fum Fum 1, Canto de las campanas 2,
-  Adeste Fideles 3…). Su `reference` queda en `NULL`: D1 no acepta sentencias de más de 100 KB y algunas
+  Adeste Fideles 3…). Su `reference` queda en `NULL` y `legacy_reference = 1`: D1 no acepta sentencias de más de 100 KB y algunas
   referencias pesan ~100 KB, así que siguen sirviéndose desde `assets/pitch/`.
 - El SQL de la migración se genera una vez con un script a partir de `app.js` e `index.html` (escapando comillas)
   y se versiona; no se escribe a mano.
@@ -65,16 +66,16 @@ CREATE UNIQUE INDEX songs_title ON songs(title COLLATE NOCASE);
 
 | Método y ruta | Respuesta |
 |---|---|
-| `GET /api/songs` | `{songs:[{id, title, track, lyrics, position, active, hasReference}]}` ordenadas por `position`. Incluye las inactivas (solo para mostrar títulos del historial); el sitio solo muestra las activas. `hasReference` = hay JSON en la base. |
+| `GET /api/songs` | `{songs:[{id, title, track, lyrics, position, active, hasReference, legacyReference}]}` ordenadas por `position`. Incluye las inactivas (solo para mostrar títulos del historial); el sitio solo muestra las activas. `hasReference` = hay JSON en la base; `legacyReference` = vale el archivo de `assets/pitch/`. |
 | `GET /api/songs/:id/reference` | El JSON de referencia guardado (`200`), o `404 not_found` si la canción no existe o no tiene referencia en la base. |
 
 ### Administración (exigen rol `admin`, igual que `/api/admin/users`)
 
 | Método y ruta | Cuerpo / respuesta |
 |---|---|
-| `GET /api/admin/songs?active=1\|0\|all` | `{songs:[{id, title, track, lyrics, position, active, hasReference, createdAt, updatedAt}]}` |
+| `GET /api/admin/songs?active=1\|0\|all` | `{songs:[{id, title, track, lyrics, position, active, hasReference, legacyReference, createdAt, updatedAt}]}` |
 | `POST /api/admin/songs` | `{title, track?, lyrics?}` → `201 {song}`; `position` = última + 1 |
-| `PATCH /api/admin/songs/:id` | Cualquiera de `{title, track, lyrics, active}` → `{song}`. Cambiar `track` (o ponerlo a `null`) borra `reference` |
+| `PATCH /api/admin/songs/:id` | Cualquiera de `{title, track, lyrics, active}` → `{song}`. Cambiar `track` (o ponerlo a `null`) borra `reference` y pone `legacy_reference = 0` |
 | `PUT /api/admin/songs/:id/reference` | El JSON de referencia (cuerpo hasta 512 KB) → `204` |
 | `PUT /api/admin/songs/order` | `{ids:[...]}` con todos los ids existentes, cada uno una vez → `204`; reescribe `position` en un `db.batch` |
 
@@ -86,6 +87,7 @@ CREATE UNIQUE INDEX songs_title ON songs(title COLLATE NOCASE);
   `notes` (array) y `phrases` (array con al menos una frase); si no, `400 invalid field:'reference'`. Solo se
   acepta si la canción tiene `track`.
 - `order`: el conjunto de `ids` debe coincidir exactamente con el de la tabla, si no `400 invalid field:'ids'`.
+- CORS añade `PUT` a los métodos permitidos.
 - `readJson` acepta un límite por ruta: 32 KB por defecto, 512 KB solo en la de referencia.
 
 ### Cambios en rutas existentes
@@ -116,9 +118,10 @@ CREATE UNIQUE INDEX songs_title ON songs(title COLLATE NOCASE);
 
 ### Práctica
 - El botón "Practicar" aparece para canciones activas con `track` y con referencia disponible: `hasReference`
-  o un id presente en `assets/pitch/index.json`.
-- Al abrir la práctica, la referencia se pide a `GET /api/songs/:id/reference` si `hasReference`; si no, a
-  `assets/pitch/<id>.json` como hoy.
+  o `legacyReference`.
+- Al abrir la práctica, la referencia se pide a `GET /api/songs/:id/reference` si `hasReference`; si no (y `legacyReference`), a
+  `assets/pitch/<id>.json` como hoy. Así, si se cambia el audio de una canción migrada y falla la subida de
+  su nueva referencia, no se usa por error el archivo antiguo.
 - `songTitle(id)` (en `format.js`) usa la lista completa, incluidas las inactivas, para "Mi progreso" y el
   panel. El selector de canción del ranking se construye desde la lista (ya no fijo en `admin-ui.js`).
 
