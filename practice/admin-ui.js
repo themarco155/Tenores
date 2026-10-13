@@ -147,8 +147,8 @@ async function renderUsers(view) {
       <td>${u.active ? 'Activo' : `Inactivo${u.deactivatedAt ? ` desde ${esc(formatDate(u.deactivatedAt))}` : ''}`}${u.mustChangePin ? ' · PIN temporal' : ''}</td>
       <td class="admin-actions">
         <button type="button" class="btn small quiet" data-act="edit">Editar</button>
-        <button type="button" class="btn small quiet" data-act="reset">Restablecer PIN</button>
-        ${u.id === me ? '' : `<button type="button" class="btn small quiet" data-act="${u.active ? 'deactivate' : 'reactivate'}">${u.active ? 'Desactivar' : 'Reactivar'}</button>
+        ${u.id === me ? '' : `<button type="button" class="btn small quiet" data-act="reset">Restablecer PIN</button>
+        <button type="button" class="btn small quiet" data-act="${u.active ? 'deactivate' : 'reactivate'}">${u.active ? 'Desactivar' : 'Reactivar'}</button>
         <button type="button" class="btn small quiet admin-danger" data-act="delete">Eliminar</button>`}
       </td></tr>`).join('')}</tbody></table></div>`;
   const byId = new Map(data.users.map(u => [String(u.id), u]));

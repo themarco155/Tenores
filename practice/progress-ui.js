@@ -22,7 +22,9 @@ export async function renderProgress(container, { userId } = {}) {
   let data;
   try { data = await src.summary(); } catch (err) { renderError(container, err, () => renderProgress(container, { userId })); return; }
   if (!data.songs.length) {
-    container.innerHTML = `<p class="practice-message">Aún no hay intentos guardados. Practica una canción con la sesión iniciada para empezar.</p>`;
+    container.innerHTML = userId
+      ? '<p class="practice-message">Este tenor aún no tiene intentos guardados.</p>'
+      : '<p class="practice-message">Aún no hay intentos guardados. Practica una canción con la sesión iniciada para empezar.</p>';
     return;
   }
   container.innerHTML = `<ul class="progress-cards">${data.songs.map(s => `
