@@ -271,6 +271,7 @@ const $trk=document.getElementById('audio-track');
 const $inlinePlayer=document.querySelector('.audio-player[data-player="trk"]');
 const $dlTrk=document.getElementById('dl-track');
 const $lblTrk=document.getElementById('lbl-track');
+const $audioCard=document.querySelector('#song-view .audio-card');
 const $audioStatus=document.getElementById('audio-status');
 const $lyrics=document.getElementById('lyrics');
 const $wrap=document.getElementById('lyrics-wrap');
@@ -527,13 +528,13 @@ function renderHome(){
 function renderSong(id){
   document.body.classList.remove('view-memories');
   document.body.classList.add('view-song');
-  const s=SONGS[id]; if(!s) return renderHome();
+  const s=SONGS[id]; if(!s||s.active===false) return renderHome();
   if(currentSongId!==id){
     $trk.pause();
     playPending=false;
     currentAudio=null;
     hideMini();
-    $trk.src=s.track;
+    if(s.track) $trk.src=s.track; else $trk.removeAttribute('src');
     $trk.load();
     $trk.playbackRate=gSpeed;
     $trk.loop=false;
@@ -546,6 +547,7 @@ function renderSong(id){
   $meta.textContent='Bienvenido al equipo. Si hacemos las cosas bien, 2026 será el mejor año de nuestra historia.';
   $lblTrk.textContent=`Descargar ${extFromUrl(s.track)}`;
   $lblTrk.dataset.default=$lblTrk.textContent;
+  $audioCard.hidden=!s.track; // canción solo con letra: sin reproductor, descarga ni práctica
   setLyrics(s.lyrics||''); $home.hidden=true; $memoriesView.hidden=true; $songView.hidden=false; setActiveCard(id);
   document.title=`Tenores - ${s.title}`; window.scrollTo({top:0,behavior:'smooth'});
   syncMiniVisibility();
@@ -663,7 +665,8 @@ $miniMeta.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.
 
 // Buscador + fix teclado móvil
 function normalize(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-const items=[...document.querySelectorAll('#grid [data-song]')].map(a=>({el:a,id:a.getAttribute('data-song'),title:normalize(a.querySelector('.mini-title').textContent)}));
+function collectItems(){return [...document.querySelectorAll('#grid [data-song]')].map(a=>({el:a,id:a.getAttribute('data-song'),title:normalize(a.querySelector('.mini-title').textContent)}));}
+let items=collectItems();
 function applyFilter(q){
   const n=normalize(q); let shown=0;
   items.forEach(({el,title})=>{const match=title.includes(n); el.hidden=!match; if(match) shown++;});
@@ -671,6 +674,34 @@ function applyFilter(q){
 }
 $q.addEventListener('input',()=>applyFilter($q.value));
 $q.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $q.value=''; applyFilter(''); $q.blur(); }});
+
+// Lista de canciones (practice/songs.js la actualiza desde el backend). Reconstruye las tarjetas con el
+// mismo marcado que index.html y repinta la canción abierta si cambió.
+function applySongList(list){
+  const before=currentSongId&&SONGS[currentSongId]?{...SONGS[currentSongId]}:null;
+  for(const id of Object.keys(SONGS)) delete SONGS[id];
+  for(const s of list) SONGS[s.id]={title:s.title,track:s.track||'',lyrics:s.lyrics||'',active:s.active!==false};
+  $grid.replaceChildren(...list.filter(s=>s.active!==false).map((s,i)=>{
+    const a=document.createElement('a');
+    a.className='mini-card'; a.href=`#${encodeURIComponent(s.id)}`; a.dataset.song=s.id;
+    const badge=document.createElement('span'); badge.className='mini-badge'; badge.textContent=String(i+1).padStart(2,'0');
+    const title=document.createElement('span'); title.className='mini-title'; title.textContent=s.title;
+    a.append(badge,title);
+    return a;
+  }));
+  items=collectItems();
+  applyFilter($q.value);
+  if(!$songView.hidden) setActiveCard(currentSongId||'');
+  if(!$songView.hidden&&currentSongId){
+    const now=SONGS[currentSongId];
+    const same=before&&now&&now.active&&now.title===before.title&&now.track===before.track&&now.lyrics===before.lyrics;
+    if(!same){
+      if(!now||!before||now.track!==before.track) currentSongId=null; // fuerza recargar el audio
+      route();
+    }
+  }
+}
+window.applySongList=applySongList;
 
 // Letras zoom
 function getZoom(){const z=parseFloat(localStorage.getItem('lyricsZoom')||'1'); return isNaN(z)?1:Math.min(1.6,Math.max(0.8,z));}

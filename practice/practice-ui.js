@@ -161,7 +161,7 @@ async function loadReference() {
   const token = s.token;
   renderMessage('Cargando referencia…');
   try {
-    const res = await fetch(new URL(`${encodeURIComponent(s.song.id)}.json`, PITCH_DIR));
+    const res = await fetch(s.song.referenceUrl || new URL(`${encodeURIComponent(s.song.id)}.json`, PITCH_DIR));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ref = await res.json();
     if (stale(token)) return;

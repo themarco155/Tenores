@@ -4,17 +4,26 @@ import { apiEnabled } from './config.js';
 import { mountPracticeMenu } from './menu.js';
 import { openMyProgress } from './progress-ui.js';
 import { openAdmin } from './admin-ui.js';
+import { initSongs, getSongs, getSong, onSongsChange, canPractice, referenceUrl } from './songs.js';
 
-const INDEX_URL = new URL('../assets/pitch/index.json', import.meta.url);
-let available = new Set();
+// Canciones incluidas en el sitio: SONGS de app.js (script clásico, global) en el orden de las tarjetas
+// de index.html. Se usan hasta que llega la lista del backend, o siempre si no hay backend.
+function builtInSongs() {
+  const all = typeof SONGS === 'undefined' ? {} : SONGS;
+  const order = [...document.querySelectorAll('#grid [data-song]')].map(a => a.dataset.song);
+  return order.filter(id => all[id]).map((id, i) => ({
+    id, title: all[id].title, track: all[id].track || null, lyrics: all[id].lyrics || '',
+    position: i + 1, active: true, hasReference: false, legacyReference: true,
+  }));
+}
 
 function songFromHash() {
   let id;
   try { id = decodeURIComponent((location.hash || '').slice(1)).trim(); }
   catch { return null; } // hash mal formado (p. ej. #%E0): sin canción
-  // SONGS es una constante global de app.js (script clásico, accesible desde módulos).
-  if (typeof SONGS === 'undefined' || !Object.prototype.hasOwnProperty.call(SONGS, id)) return null;
-  return { id, title: SONGS[id].title, track: SONGS[id].track };
+  const song = getSong(id);
+  if (!canPractice(song)) return null;
+  return { id: song.id, title: song.title, track: song.track, referenceUrl: referenceUrl(song) };
 }
 
 function syncButton() {
@@ -23,7 +32,7 @@ function syncButton() {
   if (!header || !view) return;
   let btn = document.getElementById('practiceOpen');
   const song = songFromHash();
-  if (!song || !available.has(song.id) || view.hidden) {
+  if (!song || view.hidden) {
     if (btn) btn.hidden = true;
     return;
   }
@@ -47,10 +56,11 @@ function syncButton() {
 
 window.addEventListener('hashchange', () => { closePractice(); syncButton(); });
 
-fetch(INDEX_URL)
-  .then(r => (r.ok ? r.json() : { songs: [] }))
-  .catch(() => ({ songs: [] }))
-  .then(data => { available = new Set(data.songs || []); syncButton(); });
+onSongsChange(() => {
+  if (typeof window.applySongList === 'function') window.applySongList(getSongs());
+  syncButton();
+});
+initSongs({ builtIn: builtInSongs() });
 
 // Login y progreso: solo si hay backend configurado (ver practice/config.js).
 // openMyProgress y openAdmin llegan en las tareas de "Mi progreso" y administración.
