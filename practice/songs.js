@@ -82,6 +82,17 @@ export function referenceUrl(song, base = API_BASE) {
     : new URL(`../assets/pitch/${encodeURIComponent(song.id)}.json`, import.meta.url).href;
 }
 
+// ¿Hay que calcular (o reintentar) la referencia de notas al guardar el formulario de una canción?
+// Sí con audio nuevo o cambiado, con un reintento pendiente, o si la canción tiene audio pero ninguna
+// referencia (p. ej. falló la subida y se cerró el formulario): así "Guardar" la repara.
+export function needsReference(current, track, pendingRef) {
+  if (!track) return false;
+  if (!current) return true;
+  if (track !== (current.track || null)) return true;
+  if (pendingRef && pendingRef.source === track) return true;
+  return !current.hasReference && !current.legacyReference;
+}
+
 // Nuevo orden completo tras mover `id` una posición (dir −1 sube, +1 baja) respecto a la canción
 // vecina dentro de la lista visible (p. ej. solo las activas).
 export function moveInOrder(allIds, visibleIds, id, dir) {

@@ -3,7 +3,7 @@ import { openSheet, focusFirst } from './sheet.js';
 import { renderProgress } from './progress-ui.js';
 import { getSession } from './session.js';
 import { esc, trendSymbol, daysSince, sinceFor, formatDate } from './format.js';
-import { getSongs, refreshSongs, moveInOrder } from './songs.js';
+import { getSongs, refreshSongs, moveInOrder, needsReference } from './songs.js';
 import { referenceFromUrl } from './reference-builder.js';
 
 const TABS = [['team', 'Equipo'], ['ranking', 'Ranking'], ['users', 'Usuarios'], ['songs', 'Canciones']];
@@ -399,7 +399,7 @@ function songForm(song) {
     // 1. Si el audio es nuevo, se analiza antes de guardar nada.
     const oldTrack = current?.track || null;
     let ref = null;
-    if (track && (track !== oldTrack || (pendingRef && pendingRef.source === track))) {
+    if (needsReference(current, track, pendingRef)) {
       if (pendingRef && pendingRef.source === track) ref = pendingRef;
       else {
         try {
@@ -436,7 +436,7 @@ function songForm(song) {
       } catch (err) {
         if (handleAuthError(err)) return;
         pendingRef = ref;
-        refreshSongs();
+        afterSongChange(); // la canción ya existe: que aparezca en la tabla de detrás
         return fail('Se guardó la canción pero no su referencia. Vuelve a guardar para reintentarlo.', 'track');
       }
     }

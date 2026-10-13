@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { configureSongsStorage, normalizeSongs, initSongs, refreshSongs, getSongs, getSong, onSongsChange, canPractice, referenceUrl, moveInOrder } from '../practice/songs.js';
+import { configureSongsStorage, normalizeSongs, initSongs, refreshSongs, getSongs, getSong, onSongsChange, canPractice, referenceUrl, moveInOrder, needsReference } from '../practice/songs.js';
 
 function memoryStorage(initial = {}) {
   const m = new Map(Object.entries(initial));
@@ -80,4 +80,16 @@ test('moveInOrder mueve respecto a la vecina visible y respeta los extremos', ()
   assert.deepEqual(moveInOrder(all, ['a', 'c', 'd'], 'c', 1), ['a', 'b', 'd', 'c']);
   assert.deepEqual(moveInOrder(all, all, 'a', -1), all);
   assert.deepEqual(moveInOrder(all, all, 'd', 1), all);
+});
+
+test('needsReference: audio nuevo, reintento pendiente o canción con audio sin referencia', () => {
+  const url = 'https://x.test/a.m4a';
+  assert.equal(needsReference(null, null, null), false, 'nueva sin audio');
+  assert.equal(needsReference(null, url, null), true, 'nueva con audio');
+  assert.equal(needsReference(song('a', { track: url }), url, null), false, 'mismo audio con referencia heredada');
+  assert.equal(needsReference(song('a', { track: url, legacyReference: false, hasReference: true }), url, null), false, 'mismo audio con referencia guardada');
+  assert.equal(needsReference(song('a', { track: 'https://x.test/viejo.m4a' }), url, null), true, 'audio cambiado');
+  assert.equal(needsReference(song('a', { track: url, legacyReference: false }), url, null), true, 'audio sin referencia: se repara al guardar');
+  assert.equal(needsReference(song('a', { track: url, hasReference: true }), url, { source: url }), true, 'reintento pendiente');
+  assert.equal(needsReference(song('a', { track: url }), null, null), false, 'se quita el audio');
 });

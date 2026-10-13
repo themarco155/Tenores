@@ -88,10 +88,13 @@ async function titleTaken(db, title, exceptId = '') {
   return !!(await db.prepare('SELECT id FROM songs WHERE title = ? COLLATE NOCASE AND id <> ?').bind(title, exceptId).first());
 }
 
+// Rutas del sitio que no pueden ser el id de una canción (app.js las enruta antes que las canciones).
+const RESERVED_SLUGS = new Set(['recuerdos']);
+
 async function uniqueSlug(db, title) {
   const base = slugify(title);
   let id = base;
-  for (let n = 2; await songExists(db, id); n++) id = `${base}-${n}`;
+  for (let n = 2; RESERVED_SLUGS.has(id) || await songExists(db, id); n++) id = `${base}-${n}`;
   return id;
 }
 

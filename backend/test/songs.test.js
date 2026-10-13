@@ -118,6 +118,12 @@ test('crear: slug, al final, sin audio, duplicados y sufijo', async () => {
   }
 });
 
+test('el slug no choca con las rutas del sitio (#recuerdos)', async () => {
+  const t = await adminSetup();
+  const r = await t.call('POST', '/api/admin/songs', { token: t.admin, body: { title: 'Recuerdos' } });
+  assert.equal(r.body.song.id, 'recuerdos-2');
+});
+
 test('editar: título, letra y audio; cambiar o quitar el audio invalida la referencia', async () => {
   const t = await adminSetup();
   const r1 = await t.call('PATCH', '/api/admin/songs/fum', { token: t.admin, body: { title: 'Fum, fum, fum', lyrics: 'Nueva\r\nletra' } });

@@ -700,6 +700,9 @@ function applySongList(list){
       route();
     }
   }
+  // Enlace directo a una canción que aún no estaba en la lista (p. ej. recién creada): ahora sí existe.
+  const h=(location.hash||'').replace('#','').trim();
+  if($songView.hidden&&$memoriesView.hidden&&h&&SONGS[h]&&SONGS[h].active) route();
 }
 window.applySongList=applySongList;
 
