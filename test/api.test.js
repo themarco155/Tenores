@@ -43,6 +43,17 @@ test('401 con sesión abierta borra la sesión', async () => {
   assert.equal(getSession(), null);
 });
 
+test('un 401 tardío de un token antiguo no borra la sesión nueva', async () => {
+  setSession({ token: 'viejo', user: { id: 1 } });
+  stubFetch(async () => {
+    setSession({ token: 'nuevo', user: { id: 1 } }); // otro login mientras la petición estaba en vuelo
+    return jsonResponse(401, { error: 'unauthorized' });
+  });
+  await assert.rejects(request('GET', '/api/me', undefined, { base: BASE }), e => e.code === 'unauthorized');
+  assert.equal(getSession()?.token, 'nuevo');
+  clearSession();
+});
+
 test('sin conexión → network; tiempo agotado → timeout', async () => {
   stubFetch(() => { throw new TypeError('fetch failed'); });
   await assert.rejects(request('GET', '/api/me', undefined, { base: BASE }), e => e.code === 'network' && e.status === 0 && e.message === 'No se pudo conectar con el servidor.');

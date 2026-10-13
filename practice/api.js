@@ -53,7 +53,7 @@ export async function request(method, path, body, { timeoutMs = 10_000, base = A
   try { data = await res.json(); } catch { data = null; }
   if (!res.ok) {
     const { error = 'server_error', ...extra } = data || {};
-    if (res.status === 401 && session) clearSession();
+    if (res.status === 401 && session && getSession()?.token === session.token) clearSession();
     throw new ApiError(res.status, error, messageFor(error, extra), extra);
   }
   return data;
