@@ -92,9 +92,11 @@ Haz commit, sube el repositorio a GitHub y activa **Settings → Pages → Deplo
 
 Abre tu web en GitHub Pages → menú ☰ → **Práctica → Entrar** con el administrador → elige tu PIN → **Administración → Usuarios → Nuevo usuario** para cada tenor.
 
+Antes de entrar, deja abierto en otra terminal `npx wrangler tail` y vigílalo durante el primer acceso **y** durante el cambio de PIN (`POST /api/me/pin`). Si aparece el error 1102 ("Worker exceeded CPU time limit"), el hash del PIN no cabe en el límite de CPU: baja `PIN_ITERATIONS` (ver la sección siguiente).
+
 ### Límite de CPU del plan gratuito
 
-El plan gratuito de Workers limita el tiempo de CPU por petición. El hash del PIN usa 20 000 iteraciones (`PIN_ITERATIONS`), pensado para caber holgadamente. Si al entrar ves errores 1102 o "Worker exceeded CPU time limit" en `npx wrangler tail`, baja `PIN_ITERATIONS` en `wrangler.toml` (mínimo 10 000) y vuelve a desplegar; los PIN existentes siguen funcionando porque cada usuario guarda sus propias iteraciones, y se actualizan al cambiar o restablecer el PIN.
+El plan gratuito de Workers limita el tiempo de CPU por petición. El hash del PIN usa 20 000 iteraciones (`PIN_ITERATIONS`), pensado para caber holgadamente, pero no se ha medido en el plan gratuito. La petición más costosa es el primer cambio de PIN (`POST /api/me/pin`): comprueba el PIN actual y calcula el hash del nuevo, el doble de CPU que entrar; es la comprobación crítica tras desplegar. Si al entrar ves errores 1102 o "Worker exceeded CPU time limit" en `npx wrangler tail`, baja `PIN_ITERATIONS` en `wrangler.toml` (mínimo 10 000) y vuelve a desplegar; los PIN existentes siguen funcionando porque cada usuario guarda sus propias iteraciones, y se actualizan al cambiar o restablecer el PIN.
 
 ### Copias de seguridad
 
