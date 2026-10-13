@@ -2,7 +2,7 @@ import { json } from './http.js';
 import { login, logout } from './auth.js';
 import { me, changePin, myAttempts, mySummary } from './users.js';
 import { createAttempt } from './attempts.js';
-import { listSongs, songReference } from './songs.js';
+import { listSongs, songReference, adminListSongs, createSong, updateSong, putSongReference, reorderSongs } from './songs.js';
 import { listUsers, createUser, updateUser, resetPin, deleteUser, userAttemptsAdmin, userSummaryAdmin, team, ranking } from './admin.js';
 
 const health = async () => json(200, { ok: true });
@@ -27,4 +27,9 @@ export const ROUTES = [
   ['GET', '/api/admin/users/:id/summary', userSummaryAdmin],
   ['GET', '/api/admin/team', team],
   ['GET', '/api/admin/ranking', ranking],
+  ['GET', '/api/admin/songs', adminListSongs],
+  ['POST', '/api/admin/songs', createSong],
+  ['PUT', '/api/admin/songs/order', reorderSongs],
+  ['PATCH', '/api/admin/songs/:id', updateSong],
+  ['PUT', '/api/admin/songs/:id/reference', putSongReference],
 ];
