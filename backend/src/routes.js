@@ -2,12 +2,15 @@ import { json } from './http.js';
 import { login, logout } from './auth.js';
 import { me, changePin, myAttempts, mySummary } from './users.js';
 import { createAttempt } from './attempts.js';
+import { listSongs, songReference } from './songs.js';
 import { listUsers, createUser, updateUser, resetPin, deleteUser, userAttemptsAdmin, userSummaryAdmin, team, ranking } from './admin.js';
 
 const health = async () => json(200, { ok: true });
 
 export const ROUTES = [
   ['GET', '/api/health', health],
+  ['GET', '/api/songs', listSongs],
+  ['GET', '/api/songs/:id/reference', songReference],
   ['POST', '/api/auth/login', login],
   ['POST', '/api/auth/logout', logout],
   ['GET', '/api/me', me],

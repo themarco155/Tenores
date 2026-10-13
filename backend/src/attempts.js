@@ -1,7 +1,7 @@
 import { HttpError, json, readJson } from './http.js';
 import { isInt } from './validate.js';
 import { requireSession } from './auth.js';
-import { SONG_IDS } from './songs.js';
+import { songExists, practicableSong } from './songs.js';
 
 const MIN_INTERVAL_MS = 10_000;
 const bad = field => { throw new HttpError(400, 'invalid', { field }); };
@@ -22,7 +22,7 @@ function cleanTip(t) {
 }
 
 export function validateAttempt(b) {
-  if (!SONG_IDS.includes(b.songId)) bad('songId');
+  if (typeof b.songId !== 'string' || !b.songId) bad('songId');
   if (b.mode !== 'guide' && b.mode !== 'test') bad('mode');
   if (b.valid !== true) bad('valid');
   if (!isInt(b.phraseFrom, 1, 100)) bad('phraseFrom');
@@ -49,6 +49,7 @@ export function validateAttempt(b) {
 export async function createAttempt(ctx) {
   const user = await requireSession(ctx);
   const a = validateAttempt(await readJson(ctx.request));
+  if (!(await practicableSong(ctx.db, a.songId))) bad('songId');
   const last = await ctx.db.prepare('SELECT created_at FROM attempts WHERE user_id = ? ORDER BY id DESC LIMIT 1').bind(user.id).first();
   if (last) {
     const wait = MIN_INTERVAL_MS - (ctx.now - new Date(last.created_at));
@@ -89,7 +90,7 @@ function intParam(url, name, fallback, lo, hi) {
 
 export async function attemptsPage(db, userId, url) {
   const song = url.searchParams.get('song');
-  if (song !== null && !SONG_IDS.includes(song)) bad('song');
+  if (song !== null && !(await songExists(db, song))) bad('song');
   const limit = intParam(url, 'limit', 50, 1, 100);
   const before = intParam(url, 'before', null, 1, Number.MAX_SAFE_INTEGER);
   const where = ['user_id = ?'];

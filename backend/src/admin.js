@@ -3,7 +3,7 @@ import { requireAdmin } from './auth.js';
 import { hashPin, newSalt, randomPin, pinIterations } from './crypto.js';
 import { validateUsername, validateDisplayName, validateRole, validateId } from './validate.js';
 import { attemptsPage, userSummary } from './attempts.js';
-import { SONG_IDS } from './songs.js';
+import { songExists } from './songs.js';
 
 const USER_SELECT = `SELECT u.*, (SELECT MAX(created_at) FROM attempts a WHERE a.user_id = u.id) AS last_attempt_at FROM users u`;
 
@@ -178,7 +178,7 @@ export async function team(ctx) {
 export async function ranking(ctx) {
   await requireAdmin(ctx);
   const song = ctx.url.searchParams.get('song');
-  if (song !== 'all' && !SONG_IDS.includes(song)) throw new HttpError(400, 'invalid', { field: 'song' });
+  if (song !== 'all' && (song === null || !(await songExists(ctx.db, song)))) throw new HttpError(400, 'invalid', { field: 'song' });
   const sinceRaw = ctx.url.searchParams.get('since');
   let since = '0000-01-01T00:00:00.000Z';
   if (sinceRaw !== null) {
