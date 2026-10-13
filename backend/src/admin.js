@@ -3,6 +3,7 @@ import { requireAdmin } from './auth.js';
 import { hashPin, newSalt, randomPin, pinIterations } from './crypto.js';
 import { validateUsername, validateDisplayName, validateRole, validateId } from './validate.js';
 import { attemptsPage, userSummary } from './attempts.js';
+import { SONG_IDS } from './songs.js';
 
 const USER_SELECT = `SELECT u.*, (SELECT MAX(created_at) FROM attempts a WHERE a.user_id = u.id) AS last_attempt_at FROM users u`;
 
@@ -142,4 +143,81 @@ export async function userSummaryAdmin(ctx) {
   const id = validateId(ctx.params.id);
   await findUser(ctx.db, id);
   return json(200, await userSummary(ctx.db, id));
+}
+
+const DAY = 86_400_000;
+const mean = values => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);
+const roundOrNull = v => (v == null ? null : Math.round(v));
+const shortUser = row => ({ id: row.user_id ?? row.id, username: row.username, displayName: row.display_name });
+
+export async function team(ctx) {
+  await requireAdmin(ctx);
+  const now = ctx.now.getTime();
+  const iso = days => new Date(now - days * DAY).toISOString();
+  const { results: users } = await ctx.db.prepare('SELECT id, username, display_name, role FROM users WHERE active = 1 ORDER BY display_name COLLATE NOCASE, id').all();
+  const { results: recent } = await ctx.db.prepare('SELECT user_id, score_total, created_at FROM attempts WHERE created_at >= ?').bind(iso(30)).all();
+  const { results: lasts } = await ctx.db.prepare('SELECT user_id, MAX(created_at) AS last FROM attempts GROUP BY user_id').all();
+  const lastBy = new Map(lasts.map(r => [r.user_id, r.last]));
+  const rows = users.map(u => {
+    const mine = recent.filter(r => r.user_id === u.id);
+    const within = days => mine.filter(r => r.created_at >= iso(days));
+    const last14 = within(14).map(r => r.score_total);
+    const prev14 = mine.filter(r => r.created_at >= iso(28) && r.created_at < iso(14)).map(r => r.score_total);
+    return {
+      user: { id: u.id, username: u.username, displayName: u.display_name, role: u.role },
+      lastAttemptAt: lastBy.get(u.id) ?? null,
+      attempts7d: within(7).length,
+      attempts30d: mine.length,
+      avg30d: roundOrNull(mean(mine.map(r => r.score_total))),
+      trend: last14.length && prev14.length ? Math.round(mean(last14) - mean(prev14)) : null,
+    };
+  });
+  return json(200, { team: rows });
+}
+
+export async function ranking(ctx) {
+  await requireAdmin(ctx);
+  const song = ctx.url.searchParams.get('song');
+  if (song !== 'all' && !SONG_IDS.includes(song)) throw new HttpError(400, 'invalid', { field: 'song' });
+  const sinceRaw = ctx.url.searchParams.get('since');
+  let since = '0000-01-01T00:00:00.000Z';
+  if (sinceRaw !== null) {
+    const d = new Date(sinceRaw);
+    if (Number.isNaN(d.getTime())) throw new HttpError(400, 'invalid', { field: 'since' });
+    since = d.toISOString();
+  }
+  const songFilter = song === 'all' ? '' : 'AND a.song_id = ?';
+  const stmt = ctx.db.prepare(`SELECT a.id, a.user_id, a.song_id, a.score_total, a.score_pitch, a.score_rhythm, a.score_stability, u.username, u.display_name
+    FROM attempts a JOIN users u ON u.id = a.user_id
+    WHERE u.active = 1 AND a.mode = 'test' AND a.is_full = 1 AND a.created_at >= ? ${songFilter}
+    ORDER BY a.id ASC`);
+  const { results } = await (song === 'all' ? stmt.bind(since) : stmt.bind(since, song)).all();
+
+  // Mejor intento por usuario y canción (empate → el más antiguo, por id ascendente).
+  const best = new Map(); // `${user}:${song}` → row
+  const count = new Map(); // user → intentos que cuentan
+  for (const r of results) {
+    count.set(r.user_id, (count.get(r.user_id) || 0) + 1);
+    const key = `${r.user_id}:${r.song_id}`;
+    const prev = best.get(key);
+    if (!prev || r.score_total > prev.score_total) best.set(key, r);
+  }
+
+  const byName = (a, b) => a.user.displayName.localeCompare(b.user.displayName, 'es');
+  let rows;
+  if (song !== 'all') {
+    rows = [...best.values()]
+      .sort((a, b) => b.score_total - a.score_total || a.id - b.id)
+      .map(r => ({ user: shortUser(r), best: r.score_total, pitch: r.score_pitch, rhythm: r.score_rhythm, stability: r.score_stability, attempts: count.get(r.user_id) }));
+  } else {
+    const perUser = new Map();
+    for (const r of best.values()) {
+      if (!perUser.has(r.user_id)) perUser.set(r.user_id, { user: shortUser(r), scores: [] });
+      perUser.get(r.user_id).scores.push(r.score_total);
+    }
+    rows = [...perUser.values()]
+      .map(u => ({ user: u.user, average: Math.round(mean(u.scores) * 10) / 10, songs: u.scores.length, attempts: count.get(u.user.id) }))
+      .sort((a, b) => b.average - a.average || b.songs - a.songs || byName(a, b));
+  }
+  return json(200, { rows: rows.map((r, i) => ({ position: i + 1, ...r })) });
 }

@@ -2,7 +2,7 @@ import { json } from './http.js';
 import { login, logout } from './auth.js';
 import { me, changePin, myAttempts, mySummary } from './users.js';
 import { createAttempt } from './attempts.js';
-import { listUsers, createUser, updateUser, resetPin, deleteUser, userAttemptsAdmin, userSummaryAdmin } from './admin.js';
+import { listUsers, createUser, updateUser, resetPin, deleteUser, userAttemptsAdmin, userSummaryAdmin, team, ranking } from './admin.js';
 
 const health = async () => json(200, { ok: true });
 
@@ -22,4 +22,6 @@ export const ROUTES = [
   ['POST', '/api/admin/users/:id/reset-pin', resetPin],
   ['GET', '/api/admin/users/:id/attempts', userAttemptsAdmin],
   ['GET', '/api/admin/users/:id/summary', userSummaryAdmin],
+  ['GET', '/api/admin/team', team],
+  ['GET', '/api/admin/ranking', ranking],
 ];
