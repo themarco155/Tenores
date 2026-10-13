@@ -3,6 +3,7 @@ import { isRecordingSupported } from './recorder.js';
 import { apiEnabled } from './config.js';
 import { mountPracticeMenu } from './menu.js';
 import { openMyProgress } from './progress-ui.js';
+import { openAdmin } from './admin-ui.js';
 
 const INDEX_URL = new URL('../assets/pitch/index.json', import.meta.url);
 let available = new Set();
@@ -53,6 +54,6 @@ fetch(INDEX_URL)
 
 // Login y progreso: solo si hay backend configurado (ver practice/config.js).
 // openMyProgress y openAdmin llegan en las tareas de "Mi progreso" y administración.
-const practiceHandlers = { onProgress: openMyProgress, onAdmin: () => {} };
+const practiceHandlers = { onProgress: openMyProgress, onAdmin: openAdmin };
 if (apiEnabled) mountPracticeMenu({ onProgress: () => practiceHandlers.onProgress(), onAdmin: () => practiceHandlers.onAdmin() });
 export { practiceHandlers };
