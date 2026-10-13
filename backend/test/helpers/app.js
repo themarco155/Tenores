@@ -42,3 +42,27 @@ export function setup() {
 
   return { db, env, app, clock, call, advance, seedUser, loginAs };
 }
+
+export function attemptPayload(overrides = {}) {
+  const base = {
+    engineVersion: '1.0.0',
+    songId: 'fum',
+    mode: 'test',
+    phraseFrom: 1,
+    phraseTo: 14,
+    isFull: true,
+    valid: true,
+    coverage: 0.94,
+    scores: { total: 82, pitch: 85, rhythm: 78, stability: 80 },
+    phrases: [{ index: 1, start: 1.2, end: 7.1, pitch: 90, rhythm: 70, stability: null, coverage: 1 }],
+    tips: [{ kind: 'pitch-bias', phrase: 3, text: 'Frase 3 (0:24–0:31): tiendes a quedarte ~35 cents bajo.' }],
+  };
+  return { ...base, ...overrides, scores: { ...base.scores, ...(overrides.scores || {}) } };
+}
+
+export async function insertAttempt(db, { userId, songId = 'fum', mode = 'test', isFull = 1, total = 80, pitch = 80, rhythm = 80, stability = 80, createdAt }) {
+  const r = await db.prepare(`INSERT INTO attempts (user_id, song_id, mode, phrase_from, phrase_to, is_full, score_total, score_pitch, score_rhythm, score_stability, coverage, phrase_scores, tips, engine_version, created_at)
+    VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?, ?, 1, '[]', '[]', '1.0.0', ?)`)
+    .bind(userId, songId, mode, isFull, total, pitch, rhythm, stability, createdAt).run();
+  return r.meta.last_row_id;
+}

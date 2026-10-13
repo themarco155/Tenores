@@ -2,6 +2,7 @@ import { HttpError, json, noContent, readJson } from './http.js';
 import { hashPin, newSalt, verifyPin, pinIterations } from './crypto.js';
 import { validatePin } from './validate.js';
 import { publicUser, requireSession } from './auth.js';
+import { attemptsPage, userSummary } from './attempts.js';
 
 export async function me(ctx) {
   const user = await requireSession(ctx, { allowPendingPin: true });
@@ -23,4 +24,14 @@ export async function changePin(ctx) {
     ctx.db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?').bind(user.id, ctx.tokenHash),
   ]);
   return noContent();
+}
+
+export async function myAttempts(ctx) {
+  const user = await requireSession(ctx);
+  return json(200, await attemptsPage(ctx.db, user.id, ctx.url));
+}
+
+export async function mySummary(ctx) {
+  const user = await requireSession(ctx);
+  return json(200, await userSummary(ctx.db, user.id));
 }
