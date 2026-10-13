@@ -25,6 +25,10 @@ test('envía el token y el cuerpo JSON', async () => {
   clearSession();
 });
 
+test('mensaje de título duplicado', () => {
+  assert.equal(messageFor('title_taken'), 'Ya existe una canción con ese título.');
+});
+
 test('204 devuelve null', async () => {
   stubFetch(() => new Response(null, { status: 204 }));
   assert.equal(await request('POST', '/api/auth/logout', undefined, { base: BASE }), null);

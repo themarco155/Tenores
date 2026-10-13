@@ -18,6 +18,7 @@ const MESSAGES = {
   forbidden: 'No tienes permiso para hacer esto.',
   too_fast: 'Espera unos segundos antes de guardar otro intento.',
   username_taken: 'Ese nombre de usuario ya existe.',
+  title_taken: 'Ya existe una canción con ese título.',
   self_action: 'No puedes hacer eso con tu propio usuario.',
   last_admin: 'Debe quedar al menos un administrador activo.',
   not_found: 'No se encontró lo que buscabas.',
@@ -79,6 +80,7 @@ export const api = {
   saveAttempt: result => request('POST', '/api/attempts', toAttemptPayload(result)),
   myAttempts: ({ song, before } = {}) => request('GET', `/api/me/attempts${query({ song, before, limit: 100 })}`),
   mySummary: () => request('GET', '/api/me/summary'),
+  songs: () => request('GET', '/api/songs'),
   admin: {
     users: (active = 'all') => request('GET', `/api/admin/users${query({ active })}`),
     createUser: data => request('POST', '/api/admin/users', data),
@@ -89,5 +91,10 @@ export const api = {
     userSummary: id => request('GET', `/api/admin/users/${id}/summary`),
     team: () => request('GET', '/api/admin/team'),
     ranking: (song, since) => request('GET', `/api/admin/ranking${query({ song, since })}`),
+    songs: (active = 'all') => request('GET', `/api/admin/songs${query({ active })}`),
+    createSong: data => request('POST', '/api/admin/songs', data),
+    updateSong: (id, data) => request('PATCH', `/api/admin/songs/${encodeURIComponent(id)}`, data),
+    putSongReference: (id, ref) => request('PUT', `/api/admin/songs/${encodeURIComponent(id)}/reference`, ref, { timeoutMs: 30_000 }),
+    reorderSongs: ids => request('PUT', '/api/admin/songs/order', { ids }),
   },
 };
