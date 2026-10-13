@@ -1,5 +1,7 @@
 import { openPractice, closePractice } from './practice-ui.js';
 import { isRecordingSupported } from './recorder.js';
+import { apiEnabled } from './config.js';
+import { mountPracticeMenu } from './menu.js';
 
 const INDEX_URL = new URL('../assets/pitch/index.json', import.meta.url);
 let available = new Set();
@@ -47,3 +49,9 @@ fetch(INDEX_URL)
   .then(r => (r.ok ? r.json() : { songs: [] }))
   .catch(() => ({ songs: [] }))
   .then(data => { available = new Set(data.songs || []); syncButton(); });
+
+// Login y progreso: solo si hay backend configurado (ver practice/config.js).
+// openMyProgress y openAdmin llegan en las tareas de "Mi progreso" y administración.
+const practiceHandlers = { onProgress: () => {}, onAdmin: () => {} };
+if (apiEnabled) mountPracticeMenu({ onProgress: () => practiceHandlers.onProgress(), onAdmin: () => practiceHandlers.onAdmin() });
+export { practiceHandlers };

@@ -91,3 +91,35 @@ body.practice-panel-open { overflow: hidden; }
   .practice-metrics { grid-template-columns: 1fr; }
   .practice-score__value { font-size: 44px; }
 }
+
+/* ---------- Diálogos de cuenta, progreso y administración ---------- */
+body.tsheet-open { overflow: hidden; }
+.tsheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.tsheet__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .72); }
+.tsheet__panel {
+  position: relative; width: min(480px, 100%); max-height: calc(100vh - 48px); overflow-y: auto;
+  background: var(--card, #111213); border: 1px solid var(--card-border, #1b1d1f); border-radius: var(--radius-xl, 28px);
+  padding: 24px; color: var(--fg, #f5f8f5); font-family: var(--font-ui, system-ui, sans-serif); outline: none;
+}
+.tsheet__panel--wide { width: min(980px, 100%); }
+.tsheet__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.tsheet__title { margin: 0; font-size: 22px; }
+.tsheet__eyebrow { margin: 0 0 4px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent, #0ffc7e); }
+.tsheet__close { background: none; border: 0; color: inherit; font-size: 28px; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.tsheet button:focus-visible, .tsheet input:focus-visible, .tsheet select:focus-visible { outline: 2px solid var(--accent, #0ffc7e); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .tsheet { padding: 0; }
+  .tsheet__panel { border-radius: 0; height: 100vh; max-height: 100vh; height: 100dvh; max-height: 100dvh; padding: 20px 16px; }
+}
+
+.account-form { display: flex; flex-direction: column; gap: 12px; }
+.account-form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.account-form input, .account-form select {
+  background: #000; color: inherit; border: 1px solid var(--card-border, #1b1d1f); border-radius: 10px;
+  padding: 10px 12px; font: inherit; font-weight: 400;
+}
+.account-form__error { margin: 0; color: var(--practice-bad, #ff5c5c); }
+.account-form__error[hidden] { display: none; }
+.account-form .btn { align-self: flex-start; }
+
+.quick-menu__note { margin: 4px 0 6px; font-size: 13px; color: var(--fg-muted, #dfe4ea); opacity: .8; }
