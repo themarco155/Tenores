@@ -14,7 +14,8 @@ test('todas las rutas de administración rechazan a un tenor (403) y sin sesión
   const t = await adminSetup();
   const tenor = await t.loginAs('ana');
   const routes = [['GET', '/api/admin/users'], ['POST', '/api/admin/users'], ['PATCH', '/api/admin/users/1'], ['POST', '/api/admin/users/1/reset-pin'],
-    ['DELETE', '/api/admin/users/1'], ['GET', '/api/admin/users/1/attempts'], ['GET', '/api/admin/users/1/summary']];
+    ['DELETE', '/api/admin/users/1'], ['GET', '/api/admin/users/1/attempts'], ['GET', '/api/admin/users/1/summary'],
+    ['GET', '/api/admin/team'], ['GET', '/api/admin/ranking?song=all']];
   for (const [method, path] of routes) {
     const body = method === 'GET' ? undefined : {}; // Request no admite cuerpo en GET
     assert.deepEqual((await t.call(method, path, { token: tenor, body })).body, { error: 'forbidden' }, `${method} ${path}`);
