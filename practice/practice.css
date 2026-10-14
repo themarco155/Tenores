@@ -186,3 +186,31 @@ body.tsheet-open { overflow: hidden; }
 
 /* Métrica informativa (ritmo) */
 .practice-metric__note { font-size: 12px; color: var(--fg-muted, #dfe4ea); opacity: .8; }
+
+/* Asistencia */
+.attendance-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.attendance-head .admin-note { margin: 0; }
+.attendance-counts { margin: 6px 0 10px; font-weight: 600; }
+.attendance-list { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.attendance-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--card-border, #1b1d1f); }
+.attendance-name { font-weight: 600; }
+.attendance-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 1 1 320px; max-width: 460px; }
+.attendance-option { min-height: 44px; border: 1px solid var(--card-border, #1b1d1f); border-radius: 10px; background: #000; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.attendance-option:focus-visible { outline: 2px solid var(--accent, #0ffc7e); outline-offset: 2px; }
+.attendance-option[aria-checked="true"].attendance-option--present { background: rgba(15, 252, 126, .18); border-color: var(--accent, #0ffc7e); }
+.attendance-option[aria-checked="true"].attendance-option--late { background: rgba(255, 196, 0, .18); border-color: var(--practice-warn, #ffc400); }
+.attendance-option[aria-checked="true"].attendance-option--absent { background: rgba(255, 92, 92, .18); border-color: var(--practice-bad, #ff5c5c); }
+.attendance-option[aria-checked="true"].attendance-option--excused { background: rgba(160, 170, 185, .2); border-color: #a0aab9; }
+.attendance-save { min-height: 1.4em; margin: 8px 0; color: var(--fg-muted, #dfe4ea); }
+.attendance-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.attendance-card { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--card-border, #1b1d1f); border-radius: 14px; }
+.attendance-card strong { font-size: 22px; }
+.attendance-card span { font-size: 13px; color: var(--fg-muted, #dfe4ea); }
+.attendance-below { margin-top: 8px; }
+.attendance-history { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.attendance-history li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--card-border, #1b1d1f); }
+.attendance-tag { padding: 2px 10px; border-radius: 999px; font-size: 12px; background: rgba(160, 170, 185, .2); }
+.attendance-tag--present { background: rgba(15, 252, 126, .18); }
+.attendance-tag--late { background: rgba(255, 196, 0, .18); }
+.attendance-tag--absent { background: rgba(255, 92, 92, .18); }
+@media (max-width: 640px) { .attendance-options { flex-basis: 100%; max-width: none; } }

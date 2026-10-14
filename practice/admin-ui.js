@@ -5,8 +5,9 @@ import { getSession } from './session.js';
 import { esc, trendSymbol, daysSince, sinceFor, formatDate } from './format.js';
 import { getSongs, refreshSongs, moveInOrder, needsReference } from './songs.js';
 import { referenceFromUrl } from './reference-builder.js';
+import { renderAttendance } from './attendance-ui.js';
 
-const TABS = [['team', 'Equipo'], ['ranking', 'Ranking'], ['users', 'Usuarios'], ['songs', 'Canciones']];
+const TABS = [['team', 'Equipo'], ['ranking', 'Ranking'], ['users', 'Usuarios'], ['songs', 'Canciones'], ['attendance', 'Asistencia']];
 const INACTIVE_DAYS = 14;
 
 // Estado del panel abierto. Cada vista se pinta en un contenedor nuevo (freshView) para que
@@ -29,7 +30,7 @@ function showError(container, err, retry) {
 
 export function openAdmin() {
   const sheet = openSheet({ title: 'Administración', eyebrow: 'Jefe de cuerda', wide: true, onClose: () => { state = null; } });
-  state = { sheet, tab: 'team', usersFilter: '1', songsFilter: '1', focusSong: null, rankingSong: 'all', rankingPeriod: 'season' };
+  state = { sheet, tab: 'team', usersFilter: '1', songsFilter: '1', focusSong: null, attendanceSeason: null, rankingSong: 'all', rankingPeriod: 'season' };
   sheet.body.innerHTML = `<div class="admin-tabs" role="tablist">${TABS.map(([id, label]) =>
     `<button type="button" role="tab" class="data-tab" data-tab="${id}" aria-selected="false">${label}</button>`).join('')}</div>
     <div class="admin-view" role="tabpanel"></div>`;
@@ -60,6 +61,7 @@ function showTab(tab) {
   const view = freshView();
   if (tab === 'team') renderTeam(view);
   else if (tab === 'ranking') renderRanking(view);
+  else if (tab === 'attendance') renderAttendance(view, { state, reloadTab, showError, handleAuthError, alertSheet, confirmSheet, formError });
   else if (tab === 'songs') renderSongs(view);
   else renderUsers(view);
 }
@@ -176,7 +178,7 @@ function alertSheet(err) {
   focusFirst(s.body);
 }
 
-const FIELD_NAMES = { username: 'el usuario', displayName: 'el nombre', role: 'el rol', confirmUsername: 'la confirmación', title: 'el título', track: 'el enlace del audio', lyrics: 'la letra' };
+const FIELD_NAMES = { username: 'el usuario', displayName: 'el nombre', role: 'el rol', confirmUsername: 'la confirmación', title: 'el título', track: 'el enlace del audio', lyrics: 'la letra', date: 'la fecha', note: 'la nota', confirmDate: 'la confirmación' };
 
 function showFormError(form, message, field) {
   const el = form.querySelector('[data-error]');
@@ -186,7 +188,7 @@ function showFormError(form, message, field) {
 }
 
 function formError(form, err) {
-  const field = err.code === 'username_taken' ? 'username' : err.code === 'title_taken' ? 'title' : err.field;
+  const field = err.code === 'username_taken' ? 'username' : err.code === 'title_taken' ? 'title' : err.code === 'rehearsal_exists' ? 'date' : err.field;
   showFormError(form, err.code === 'invalid' && err.field ? `Revisa ${FIELD_NAMES[err.field] || 'los datos'}.` : err.message, field);
 }
 
