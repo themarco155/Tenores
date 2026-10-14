@@ -23,3 +23,9 @@ Entorno local: `npm run serve` (raíz) + `cd backend && npm run dev`.
 | 17 | Canciones: enlace roto → "No se pudo descargar el audio…" y no se guarda nada | | |
 | 18 | Canciones: desactivar → desaparece de la portada y de práctica; sigue en "Mi progreso" con su título | | |
 | 19 | Canciones: backend apagado → la portada muestra la última lista guardada | | |
+| 20 | Asistencia: "Tomar asistencia de hoy" en móvil → lista con todos los activos en Ausente | | |
+| 21 | Asistencia: marcar todos presentes y cambiar algunos → "Guardado ✓" | | |
+| 22 | Asistencia: API apagada al marcar → "No se pudo guardar" + Reintentar sin perder cambios | | |
+| 23 | Asistencia: registrar un ensayo de otra fecha y editar su nota | | |
+| 24 | Asistencia: reporte con tarjetas, leaderboard, "Sin mínimo" y detalle por integrante | | |
+| 25 | Asistencia: borrar un ensayo exige escribir la fecha | | |

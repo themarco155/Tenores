@@ -121,3 +121,14 @@ publicar el sitio nuevo.
 
 Para regenerar `0002_songs.sql` (solo si se cambian las canciones de `app.js` antes del primer despliegue):
 `node tools/build-songs-migration.mjs`.
+
+## Asistencia
+
+Los administradores toman asistencia en **Administración → Asistencia**: "Tomar asistencia de hoy" abre la lista de
+todos los usuarios activos (empiezan como Ausente), se marca Presente, Tarde, Ausente o Justificado y cada cambio se
+guarda solo. **Reporte** muestra la temporada (1 de septiembre a 31 de agosto): % de asistencia de cada integrante
+(Tarde cuenta como asistido, Justificado no cuenta), tardanzas y un leaderboard (mínimo: registro en la mitad de los
+ensayos). Todo es solo para administradores.
+
+**Al desplegar esta versión:** `npm run db:migrate:remote` (aplica `0003_attendance.sql`), `npm run deploy` y después
+publicar la web.
