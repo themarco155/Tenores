@@ -76,11 +76,13 @@ function aggregate(notes) {
   };
 }
 
+// Media ponderada de las métricas disponibles (sin estabilidad si no hay notas largas).
 function totalScore({ coverage, pitch, rhythm, stability }) {
   const w = SCORING.weights;
-  const base = stability == null
-    ? (w.pitch * pitch + w.rhythm * rhythm) / (w.pitch + w.rhythm)
-    : w.pitch * pitch + w.rhythm * rhythm + w.stability * stability;
+  const parts = [[w.pitch, pitch], [w.rhythm, rhythm]];
+  if (stability != null) parts.push([w.stability, stability]);
+  const weight = parts.reduce((s, [wi]) => s + wi, 0);
+  const base = parts.reduce((s, [wi, v]) => s + wi * v, 0) / weight;
   return base * Math.min(1, coverage / SCORING.fullCoverage);
 }
 

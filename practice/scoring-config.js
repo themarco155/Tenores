@@ -1,6 +1,7 @@
 // Único lugar con umbrales y pesos. Calibrar aquí con grabaciones reales.
 export const SCORING = {
-  weights: { pitch: 0.5, rhythm: 0.3, stability: 0.2 },
+  // El ritmo (timing de las entradas) se calcula y se muestra, pero no cuenta en la nota (peso 0).
+  weights: { pitch: 0.5, rhythm: 0, stability: 0.2 },
   pitchCents: [20, 100],     // lin(|desviación|): 100 pts → 0 pts
   rhythmMs: [80, 400],
   stabilityCents: [15, 60],

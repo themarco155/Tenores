@@ -4,7 +4,7 @@ import { align } from './align.js';
 import { score } from './score.js';
 import { bandFor } from './scoring-config.js';
 
-export const ENGINE_VERSION = '1.0.0';
+export const ENGINE_VERSION = '1.1.0'; // 1.1.0: el ritmo deja de contar en la nota total
 
 export function analyze({ samples, sampleRate, refData, mode, phraseFrom, phraseTo }) {
   const user = detectPitch(samples, sampleRate).midi;

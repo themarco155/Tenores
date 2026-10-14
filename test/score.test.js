@@ -99,3 +99,11 @@ test('toma cortada al 97 % en modo guía (canción larga) → válida y la últi
   assert.ok(last.coverage > 0 && last.coverage < 1, `cobertura última frase ${last.coverage}`);
   assert.ok(r.scores.rhythm >= 90, `ritmo ${r.scores.rhythm}`);
 });
+
+test('entrar tarde no baja la nota: el ritmo se informa pero no cuenta en el total', () => {
+  const late = [...Array(40).fill(null), ...curve(MELODY)]; // 400 ms tarde en todo el canto, con guía
+  const r = runScore(late, 'guide');
+  assert.ok(r.scores.rhythm < 70, `ritmo ${r.scores.rhythm}`);
+  assert.ok(r.scores.pitch >= 95 && r.scores.stability >= 95);
+  assert.ok(r.scores.total >= 95, `total ${r.scores.total}`);
+});

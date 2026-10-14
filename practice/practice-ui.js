@@ -8,7 +8,7 @@ import { mountSaveStatus } from './save-status.js';
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
 const GUIDE_TIMEOUT_MS = 3000; // si la guía no empieza a sonar en este tiempo, se avisa
-const METRICS = [['pitch', 'Afinación'], ['rhythm', 'Ritmo y entradas'], ['stability', 'Estabilidad']];
+const METRICS = [['pitch', 'Afinación'], ['rhythm', 'Ritmo y entradas', 'No cuenta en la nota'], ['stability', 'Estabilidad']];
 
 let panel = null, sheet = null, body = null, titleEl = null, opener = null;
 let s = null; // sesión de práctica abierta
@@ -365,8 +365,8 @@ function renderResults(r) {
     body.innerHTML = `<div class="practice-results">
       <div class="practice-score score--${band(r.scores.total)}">
         <span class="practice-score__value">${r.scores.total}</span><span class="practice-score__label">Puntuación</span></div>
-      <ul class="practice-metrics">${METRICS.map(([k, label]) =>
-        `<li class="score--${band(r.scores[k])}"><span>${label}</span><strong>${r.scores[k] ?? '—'}</strong></li>`).join('')}</ul>
+      <ul class="practice-metrics">${METRICS.map(([k, label, note]) =>
+        `<li class="score--${band(r.scores[k])}"><span>${label}</span><strong>${r.scores[k] ?? '—'}</strong>${note ? `<small class="practice-metric__note">${note}</small>` : ''}</li>`).join('')}</ul>
       <p class="practice-save" data-save aria-live="polite"></p>
       ${r.tips.length ? `<h3 class="practice-subtitle">Qué mejorar</h3><ul class="practice-tips">${r.tips.map(t => `<li>${esc(t.text)}</li>`).join('')}</ul>` : ''}
       <div class="practice-chart-wrap">${renderChart(r.curves, r.phrases)}
