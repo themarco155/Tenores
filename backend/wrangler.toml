@@ -3,13 +3,15 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 
 [vars]
-# Orígenes permitidos (coma). Al desplegar se añade el de GitHub Pages: ver backend/README.md
-ALLOWED_ORIGINS = "http://127.0.0.1:8000,http://localhost:*"
+# Orígenes permitidos (coma): la web en GitHub Pages y el servidor local de desarrollo.
+ALLOWED_ORIGINS = "https://themarco155.github.io,http://127.0.0.1:8000,http://localhost:*"
 PIN_ITERATIONS = "20000"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tenores"
-# Para local basta este valor; al desplegar se sustituye por el id de `wrangler d1 create tenores`.
-database_id = "00000000-0000-0000-0000-000000000000"
+# Base de producción (creada con `wrangler d1 create tenores`).
+database_id = "814f02e7-9330-4e67-972f-0b7ac79c6ae0"
+# Base local de `wrangler dev`: se mantiene la de desarrollo para no mezclarla con producción.
+preview_database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
