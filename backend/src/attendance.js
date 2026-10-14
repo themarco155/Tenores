@@ -1,4 +1,8 @@
 // Asistencia a ensayos: reglas (temporadas, fechas, reporte) y rutas de administración.
+import { HttpError, json, noContent, readJson } from './http.js';
+import { requireAdmin } from './auth.js';
+import { validateId } from './validate.js';
+
 export const STATUSES = ['present', 'late', 'absent', 'excused'];
 const DAY = 86_400_000;
 const MAX_DAYS_AHEAD = 7;
@@ -55,4 +59,118 @@ export function attendanceReport(rows, rehearsalCount) {
     leaderboard: ranked.map((p, i) => ({ position: i + 1, userId: p.user.id })),
     belowMinimum: active.filter(p => !ranked.includes(p)).map(p => ({ userId: p.user.id })),
   };
+}
+
+const bad = field => { throw new HttpError(400, 'invalid', { field }); };
+const MAX_ENTRIES = 200;
+
+function validateNote(v) {
+  if (v === undefined || v === null) return '';
+  if (typeof v !== 'string') bad('note');
+  const note = v.trim();
+  if (note.length > 200) bad('note');
+  return note;
+}
+
+export function seasonParam(url, now) {
+  const raw = url.searchParams.get('season');
+  if (raw === null) return currentSeason(now);
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 2000 || n > 2100) bad('season');
+  return n;
+}
+
+async function rehearsalRow(db, id) {
+  const row = await db.prepare('SELECT id, date, note FROM rehearsals WHERE id = ?').bind(id).first();
+  if (!row) throw new HttpError(404, 'not_found');
+  return row;
+}
+
+async function rehearsalEntries(db, id) {
+  const { results } = await db.prepare(`SELECT a.status, u.id, u.display_name, u.username, u.active
+    FROM attendance a JOIN users u ON u.id = a.user_id
+    WHERE a.rehearsal_id = ? ORDER BY u.display_name COLLATE NOCASE, u.id`).bind(id).all();
+  return results.map(r => ({ user: { id: r.id, displayName: r.display_name, username: r.username, active: !!r.active }, status: r.status }));
+}
+
+async function dateTaken(db, date, exceptId = 0) {
+  return !!(await db.prepare('SELECT id FROM rehearsals WHERE date = ? AND id <> ?').bind(date, exceptId).first());
+}
+
+// Usuarios activos que aún no están en la lista del ensayo → Ausente.
+const addMissingActive = (db, id, ts) => db.prepare(`INSERT OR IGNORE INTO attendance (rehearsal_id, user_id, status, updated_at)
+  SELECT ?, id, 'absent', ? FROM users WHERE active = 1`).bind(id, ts);
+
+export async function listRehearsals(ctx) {
+  await requireAdmin(ctx);
+  const { from, to } = seasonRange(seasonParam(ctx.url, ctx.now));
+  const { results } = await ctx.db.prepare(`SELECT r.id, r.date, r.note,
+      SUM(a.status = 'present') AS present, SUM(a.status = 'late') AS late,
+      SUM(a.status = 'absent') AS absent, SUM(a.status = 'excused') AS excused
+    FROM rehearsals r LEFT JOIN attendance a ON a.rehearsal_id = r.id
+    WHERE r.date BETWEEN ? AND ? GROUP BY r.id ORDER BY r.date DESC`).bind(from, to).all();
+  return json(200, { rehearsals: results.map(r => ({ id: r.id, date: r.date, note: r.note,
+    present: r.present || 0, late: r.late || 0, absent: r.absent || 0, excused: r.excused || 0 })) });
+}
+
+export async function createRehearsal(ctx) {
+  const admin = await requireAdmin(ctx);
+  const body = await readJson(ctx.request);
+  if (!validDate(body.date, ctx.now)) bad('date');
+  const note = validateNote(body.note);
+  if (await dateTaken(ctx.db, body.date)) throw new HttpError(409, 'rehearsal_exists');
+  const ts = ctx.now.toISOString();
+  const r = await ctx.db.prepare('INSERT INTO rehearsals (date, note, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(body.date, note, admin.id, ts, ts).run();
+  const id = r.meta.last_row_id;
+  await addMissingActive(ctx.db, id, ts).run();
+  return json(201, { rehearsal: await rehearsalRow(ctx.db, id), entries: await rehearsalEntries(ctx.db, id) });
+}
+
+export async function getRehearsal(ctx) {
+  await requireAdmin(ctx);
+  const id = validateId(ctx.params.id);
+  return json(200, { rehearsal: await rehearsalRow(ctx.db, id), entries: await rehearsalEntries(ctx.db, id) });
+}
+
+export async function updateRehearsal(ctx) {
+  await requireAdmin(ctx);
+  const id = validateId(ctx.params.id);
+  const current = await rehearsalRow(ctx.db, id);
+  const body = await readJson(ctx.request);
+  if (!('date' in body) && !('note' in body)) bad('body');
+  const date = 'date' in body ? body.date : current.date;
+  if ('date' in body && !validDate(date, ctx.now)) bad('date');
+  const note = 'note' in body ? validateNote(body.note) : current.note;
+  if (await dateTaken(ctx.db, date, id)) throw new HttpError(409, 'rehearsal_exists');
+  await ctx.db.prepare('UPDATE rehearsals SET date = ?, note = ?, updated_at = ? WHERE id = ?').bind(date, note, ctx.now.toISOString(), id).run();
+  return json(200, { rehearsal: await rehearsalRow(ctx.db, id) });
+}
+
+export async function saveAttendance(ctx) {
+  await requireAdmin(ctx);
+  const id = validateId(ctx.params.id);
+  await rehearsalRow(ctx.db, id);
+  const { entries } = await readJson(ctx.request);
+  if (!Array.isArray(entries) || entries.length < 1 || entries.length > MAX_ENTRIES) bad('entries');
+  const ts = ctx.now.toISOString();
+  await addMissingActive(ctx.db, id, ts).run();
+  const { results } = await ctx.db.prepare('SELECT user_id FROM attendance WHERE rehearsal_id = ?').bind(id).all();
+  const listed = new Set(results.map(r => r.user_id));
+  for (const e of entries) {
+    if (!e || !Number.isInteger(e.userId) || !listed.has(e.userId) || !STATUSES.includes(e.status)) bad('entries');
+  }
+  await ctx.db.batch(entries.map(e => ctx.db.prepare('UPDATE attendance SET status = ?, updated_at = ? WHERE rehearsal_id = ? AND user_id = ?')
+    .bind(e.status, ts, id, e.userId)));
+  return json(200, { entries: await rehearsalEntries(ctx.db, id) });
+}
+
+export async function deleteRehearsal(ctx) {
+  await requireAdmin(ctx);
+  const id = validateId(ctx.params.id);
+  const current = await rehearsalRow(ctx.db, id);
+  const { confirmDate } = await readJson(ctx.request);
+  if (confirmDate !== current.date) bad('confirmDate');
+  await ctx.db.prepare('DELETE FROM rehearsals WHERE id = ?').bind(id).run();
+  return noContent();
 }

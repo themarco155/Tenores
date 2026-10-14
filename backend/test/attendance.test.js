@@ -62,3 +62,77 @@ test('reporte: %, tardanzas, mínimo, desempates e inactivos (números hechos a 
 test('reporte de una temporada vacía', () => {
   assert.deepEqual(attendanceReport([], 0), { rehearsals: 0, minimum: 0, teamAverage: null, people: [], leaderboard: [], belowMinimum: [] });
 });
+
+async function adminSetup() {
+  const t = setup(); // reloj en 2026-10-01T10:00:00Z (temporada 2026)
+  const adminId = await t.seedUser({ username: 'jefe', displayName: 'Jefe', role: 'admin' });
+  const anaId = await t.seedUser({ username: 'ana', displayName: 'Ana' });
+  await t.seedUser({ username: 'baja', displayName: 'Baja', active: 0 });
+  const admin = await t.loginAs('jefe');
+  return { ...t, adminId, anaId, admin };
+}
+
+test('crear ensayo: activos como Ausente, desactivados fuera, fecha única y válida', async () => {
+  const t = await adminSetup();
+  const r = await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30', note: '  Ensayo general ' } });
+  assert.equal(r.status, 201);
+  assert.deepEqual([r.body.rehearsal.date, r.body.rehearsal.note], ['2026-09-30', 'Ensayo general']);
+  assert.deepEqual(r.body.entries.map(e => [e.user.displayName, e.status]), [['Ana', 'absent'], ['Jefe', 'absent']]);
+  assert.deepEqual(Object.keys(r.body.entries[0].user).sort(), ['active', 'displayName', 'id', 'username']);
+  assert.deepEqual((await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30' } })).body, { error: 'rehearsal_exists' });
+  for (const [body, field] of [[{ date: '2026-10-09' }, 'date'], [{ date: '2026-02-30' }, 'date'], [{}, 'date'], [{ date: '2026-09-29', note: 'x'.repeat(201) }, 'note']]) {
+    assert.deepEqual((await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body })).body, { error: 'invalid', field });
+  }
+  assert.equal((await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-10-08' } })).status, 201, 'hasta 7 días en el futuro');
+});
+
+test('listar con recuentos por temporada, de más reciente a más antiguo', async () => {
+  const t = await adminSetup();
+  const a = (await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-10' } })).body.rehearsal.id;
+  await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-17' } });
+  await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-08-20' } }); // temporada 2025
+  await t.call('PUT', `/api/admin/rehearsals/${a}/attendance`, { token: t.admin, body: { entries: [{ userId: t.anaId, status: 'late' }] } });
+  const list = await t.call('GET', '/api/admin/rehearsals?season=2026', { token: t.admin });
+  assert.deepEqual(list.body.rehearsals.map(r => [r.date, r.present, r.late, r.absent, r.excused]), [['2026-09-17', 0, 0, 2, 0], ['2026-09-10', 0, 1, 1, 0]]);
+  assert.deepEqual((await t.call('GET', '/api/admin/rehearsals', { token: t.admin })).body.rehearsals.length, 2, 'sin season → temporada actual');
+  assert.deepEqual((await t.call('GET', '/api/admin/rehearsals?season=2025', { token: t.admin })).body.rehearsals.map(r => r.date), ['2026-08-20']);
+  assert.deepEqual((await t.call('GET', '/api/admin/rehearsals?season=abc', { token: t.admin })).body, { error: 'invalid', field: 'season' });
+});
+
+test('guardar estados en lote; altas posteriores entran como Ausente; validación', async () => {
+  const t = await adminSetup();
+  const id = (await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30' } })).body.rehearsal.id;
+  const nuevoId = await t.seedUser({ username: 'nuevo', displayName: 'Nuevo' });
+  const r = await t.call('PUT', `/api/admin/rehearsals/${id}/attendance`, { token: t.admin, body: { entries: [{ userId: t.anaId, status: 'present' }, { userId: t.adminId, status: 'excused' }] } });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.entries.map(e => [e.user.displayName, e.status]), [['Ana', 'present'], ['Jefe', 'excused'], ['Nuevo', 'absent']]);
+  assert.equal((await t.call('PUT', `/api/admin/rehearsals/${id}/attendance`, { token: t.admin, body: { entries: [{ userId: nuevoId, status: 'late' }] } })).status, 200);
+  const detail = await t.call('GET', `/api/admin/rehearsals/${id}`, { token: t.admin });
+  assert.deepEqual(detail.body.entries.map(e => e.status), ['present', 'excused', 'late']);
+  const bajaId = (await t.db.prepare("SELECT id FROM users WHERE username = 'baja'").first()).id;
+  for (const entries of [[], [{ userId: t.anaId, status: 'tarde' }], [{ userId: 999, status: 'present' }], [{ userId: bajaId, status: 'present' }], 'x', [{ userId: String(t.anaId), status: 'present' }]]) {
+    assert.deepEqual((await t.call('PUT', `/api/admin/rehearsals/${id}/attendance`, { token: t.admin, body: { entries } })).body, { error: 'invalid', field: 'entries' }, JSON.stringify(entries));
+  }
+  assert.equal((await t.call('PUT', '/api/admin/rehearsals/999/attendance', { token: t.admin, body: { entries: [{ userId: t.anaId, status: 'present' }] } })).status, 404);
+});
+
+test('editar fecha y nota; borrar exige escribir la fecha', async () => {
+  const t = await adminSetup();
+  const id = (await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30' } })).body.rehearsal.id;
+  await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-23' } });
+  const e = await t.call('PATCH', `/api/admin/rehearsals/${id}`, { token: t.admin, body: { date: '2026-09-29', note: 'Cambio de día' } });
+  assert.deepEqual(e.body.rehearsal, { id, date: '2026-09-29', note: 'Cambio de día' });
+  assert.deepEqual((await t.call('PATCH', `/api/admin/rehearsals/${id}`, { token: t.admin, body: { date: '2026-09-23' } })).body, { error: 'rehearsal_exists' });
+  assert.deepEqual((await t.call('PATCH', `/api/admin/rehearsals/${id}`, { token: t.admin, body: {} })).body, { error: 'invalid', field: 'body' });
+  assert.deepEqual((await t.call('DELETE', `/api/admin/rehearsals/${id}`, { token: t.admin, body: { confirmDate: '2026-09-30' } })).body, { error: 'invalid', field: 'confirmDate' });
+  assert.equal((await t.call('DELETE', `/api/admin/rehearsals/${id}`, { token: t.admin, body: { confirmDate: '2026-09-29' } })).status, 204);
+  assert.equal((await t.db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE rehearsal_id = ?').bind(id).first('n')), 0);
+  assert.equal((await t.call('GET', `/api/admin/rehearsals/${id}`, { token: t.admin })).status, 404);
+});
+
+test('borrar un usuario borra sus registros de asistencia', async () => {
+  const t = await adminSetup();
+  await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30' } });
+  assert.equal((await t.call('DELETE', `/api/admin/users/${t.anaId}`, { token: t.admin, body: { confirmUsername: 'ana' } })).status, 204);
+  assert.equal(await t.db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE user_id = ?').bind(t.anaId).first('n'), 0);
+});
