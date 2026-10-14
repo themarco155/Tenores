@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { request, toAttemptPayload, query, messageFor, ApiError } from '../practice/api.js';
 import { configureStorage, setSession, getSession, clearSession } from '../practice/session.js';
-import { resolveApiBase } from '../practice/config.js';
+import { resolveApiBase, PRODUCTION_API } from '../practice/config.js';
 
 const BASE = 'http://api.test';
 configureStorage({ getItem: () => null, setItem() {}, removeItem() {} });
@@ -77,8 +77,9 @@ test('toAttemptPayload quita las curvas y query omite vacíos', () => {
   assert.equal(query({}), '');
 });
 
-test('resolveApiBase: local usa wrangler dev; producción sin configurar queda vacía', () => {
+test('resolveApiBase: local usa wrangler dev; fuera de local, la API de producción', () => {
   assert.equal(resolveApiBase('127.0.0.1'), 'http://127.0.0.1:8787');
   assert.equal(resolveApiBase('localhost'), 'http://127.0.0.1:8787');
-  assert.equal(resolveApiBase('tenores.github.io'), '');
+  assert.equal(resolveApiBase('themarco155.github.io'), PRODUCTION_API);
+  assert.match(PRODUCTION_API, /^https:\/\//);
 });
