@@ -136,3 +136,36 @@ test('borrar un usuario borra sus registros de asistencia', async () => {
   assert.equal((await t.call('DELETE', `/api/admin/users/${t.anaId}`, { token: t.admin, body: { confirmUsername: 'ana' } })).status, 204);
   assert.equal(await t.db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE user_id = ?').bind(t.anaId).first('n'), 0);
 });
+
+test('las rutas de asistencia rechazan a un tenor (403) y sin sesión (401)', async () => {
+  const t = await adminSetup();
+  const tenor = await t.loginAs('ana');
+  const routes = [['GET', '/api/admin/rehearsals'], ['POST', '/api/admin/rehearsals'], ['GET', '/api/admin/rehearsals/1'], ['PATCH', '/api/admin/rehearsals/1'],
+    ['DELETE', '/api/admin/rehearsals/1'], ['PUT', '/api/admin/rehearsals/1/attendance'], ['GET', '/api/admin/attendance/report'], ['GET', '/api/admin/attendance/seasons']];
+  for (const [method, path] of routes) {
+    const body = method === 'GET' ? undefined : {};
+    assert.deepEqual((await t.call(method, path, { token: tenor, body })).body, { error: 'forbidden' }, `${method} ${path}`);
+    assert.equal((await t.call(method, path, { body })).status, 401, `${method} ${path} sin sesión`);
+  }
+});
+
+test('reporte por API: solo ensayos de la temporada, límites de fecha y temporadas disponibles', async () => {
+  const t = await adminSetup();
+  const mk = async date => (await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date } })).body.rehearsal.id;
+  const sep1 = await mk('2026-09-01');
+  await mk('2026-09-08');
+  const aug31 = await mk('2026-08-31'); // temporada 2025
+  await t.call('PUT', `/api/admin/rehearsals/${sep1}/attendance`, { token: t.admin, body: { entries: [{ userId: t.anaId, status: 'present' }, { userId: t.adminId, status: 'late' }] } });
+  await t.call('PUT', `/api/admin/rehearsals/${aug31}/attendance`, { token: t.admin, body: { entries: [{ userId: t.anaId, status: 'present' }] } });
+  const r = await t.call('GET', '/api/admin/attendance/report?season=2026', { token: t.admin });
+  assert.deepEqual([r.body.season, r.body.from, r.body.to, r.body.rehearsals, r.body.minimum], [2026, '2026-09-01', '2027-08-31', 2, 1]);
+  const ana = r.body.people.find(p => p.user.id === t.anaId);
+  assert.deepEqual([ana.recorded, ana.present, ana.absent, ana.attendancePct, ana.lastAbsence], [2, 1, 1, 50, '2026-09-08']);
+  assert.deepEqual(r.body.leaderboard.map(l => l.userId), [t.anaId, t.adminId], 'empate en % y asistidos → menos tardanzas primero');
+  const r25 = await t.call('GET', '/api/admin/attendance/report?season=2025', { token: t.admin });
+  assert.deepEqual([r25.body.rehearsals, r25.body.people.find(p => p.user.id === t.anaId).attendancePct], [1, 100]);
+  const empty = await t.call('GET', '/api/admin/attendance/report?season=2030', { token: t.admin });
+  assert.deepEqual([empty.body.rehearsals, empty.body.teamAverage, empty.body.people], [0, null, []]);
+  assert.deepEqual((await t.call('GET', '/api/admin/attendance/report?season=1999', { token: t.admin })).body, { error: 'invalid', field: 'season' });
+  assert.deepEqual((await t.call('GET', '/api/admin/attendance/seasons', { token: t.admin })).body, { seasons: [2026, 2025], current: 2026 });
+});

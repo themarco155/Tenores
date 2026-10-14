@@ -174,3 +174,22 @@ export async function deleteRehearsal(ctx) {
   await ctx.db.prepare('DELETE FROM rehearsals WHERE id = ?').bind(id).run();
   return noContent();
 }
+
+export async function attendanceReportRoute(ctx) {
+  await requireAdmin(ctx);
+  const season = seasonParam(ctx.url, ctx.now);
+  const { from, to } = seasonRange(season);
+  const count = await ctx.db.prepare('SELECT COUNT(*) AS n FROM rehearsals WHERE date BETWEEN ? AND ?').bind(from, to).first('n');
+  const { results } = await ctx.db.prepare(`SELECT a.user_id, a.status, r.date, u.display_name, u.username, u.active
+    FROM attendance a JOIN rehearsals r ON r.id = a.rehearsal_id JOIN users u ON u.id = a.user_id
+    WHERE r.date BETWEEN ? AND ?`).bind(from, to).all();
+  return json(200, { season, from, to, ...attendanceReport(results, count) });
+}
+
+export async function attendanceSeasons(ctx) {
+  await requireAdmin(ctx);
+  const { results } = await ctx.db.prepare('SELECT date FROM rehearsals').all();
+  const current = currentSeason(ctx.now);
+  const seasons = [...new Set([current, ...results.map(r => seasonOf(r.date))])].sort((a, b) => b - a);
+  return json(200, { seasons, current });
+}

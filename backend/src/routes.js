@@ -2,7 +2,7 @@ import { json } from './http.js';
 import { login, logout } from './auth.js';
 import { me, changePin, myAttempts, mySummary } from './users.js';
 import { createAttempt } from './attempts.js';
-import { listRehearsals, createRehearsal, getRehearsal, updateRehearsal, saveAttendance, deleteRehearsal } from './attendance.js';
+import { listRehearsals, createRehearsal, getRehearsal, updateRehearsal, saveAttendance, deleteRehearsal, attendanceReportRoute, attendanceSeasons } from './attendance.js';
 import { listSongs, songReference, adminListSongs, createSong, updateSong, putSongReference, reorderSongs } from './songs.js';
 import { listUsers, createUser, updateUser, resetPin, deleteUser, userAttemptsAdmin, userSummaryAdmin, team, ranking } from './admin.js';
 
@@ -39,4 +39,6 @@ export const ROUTES = [
   ['PATCH', '/api/admin/rehearsals/:id', updateRehearsal],
   ['DELETE', '/api/admin/rehearsals/:id', deleteRehearsal],
   ['PUT', '/api/admin/rehearsals/:id/attendance', saveAttendance],
+  ['GET', '/api/admin/attendance/report', attendanceReportRoute],
+  ['GET', '/api/admin/attendance/seasons', attendanceSeasons],
 ];
