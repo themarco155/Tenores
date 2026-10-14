@@ -108,7 +108,8 @@ CREATE INDEX attendance_user ON attendance(user_id);
   "people": [
     { "user": {"id": 1, "displayName": "Ana", "username": "ana", "active": true},
       "recorded": 11, "present": 8, "late": 1, "absent": 1, "excused": 1,
-      "attendancePct": 90.0, "latePct": 11.1, "lastAbsence": "2026-10-08" }
+      "attendancePct": 90.0, "latePct": 11.1, "lastAbsence": "2026-10-08",
+      "history": [{"date": "2026-10-08", "status": "absent"}] }
   ],
   "leaderboard": [{ "position": 1, "userId": 1 }],
   "belowMinimum": [{ "userId": 7 }]
@@ -117,6 +118,8 @@ CREATE INDEX attendance_user ON attendance(user_id);
 
 - Porcentajes redondeados a 1 decimal. `people` incluye activos e inactivos con registros en la temporada (los inactivos
   con `active:false`), ordenados por nombre visible.
+- `history` es el historial de esa persona en la temporada (fecha y estado), del ensayo más reciente al más antiguo; lo usa
+  el detalle por persona del panel.
 - `leaderboard` y `belowMinimum` solo incluyen activos.
 - El cálculo vive en una función pura del backend (`attendanceReport(rows, rehearsalCount)`) para probarlo con números
   hechos a mano.
