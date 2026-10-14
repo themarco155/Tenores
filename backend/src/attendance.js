@@ -89,8 +89,10 @@ async function rehearsalRow(db, id) {
 async function rehearsalEntries(db, id) {
   const { results } = await db.prepare(`SELECT a.status, u.id, u.display_name, u.username, u.active
     FROM attendance a JOIN users u ON u.id = a.user_id
-    WHERE a.rehearsal_id = ? ORDER BY u.display_name COLLATE NOCASE, u.id`).bind(id).all();
-  return results.map(r => ({ user: { id: r.id, displayName: r.display_name, username: r.username, active: !!r.active }, status: r.status }));
+    WHERE a.rehearsal_id = ?`).bind(id).all();
+  // Orden alfabético en español (como el reporte): "Ángel" va junto a "Ana", no después de la Z.
+  return results.map(r => ({ user: { id: r.id, displayName: r.display_name, username: r.username, active: !!r.active }, status: r.status }))
+    .sort(byName);
 }
 
 async function dateTaken(db, date, exceptId = 0) {

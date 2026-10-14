@@ -64,6 +64,12 @@ export function createSaveQueue({ send, delay = 500, onState = () => {}, timers 
     return inflight;
   }
 
+  // Al cerrar: espera el envío en curso y manda lo que quede, hasta vaciar la cola. Si algo falla, rechaza y los
+  // cambios siguen en `pendingCount` para poder avisar.
+  async function drain() {
+    do { await flush(); } while (pending.size);
+  }
+
   return {
     set(userId, status) {
       pending.set(userId, status);
@@ -71,6 +77,17 @@ export function createSaveQueue({ send, delay = 500, onState = () => {}, timers 
       if (!inflight) schedule();
     },
     flush,
+    drain,
     get pendingCount() { return pending.size; },
+  };
+}
+
+// Evita abrir dos veces lo mismo con un doble toque: mientras la primera llamada sigue en curso, las demás no hacen nada.
+export function singleFlight(fn) {
+  let busy = false;
+  return async (...args) => {
+    if (busy) return undefined;
+    busy = true;
+    try { return await fn(...args); } finally { busy = false; }
   };
 }

@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import { openSheet, focusFirst } from './sheet.js';
 import { esc } from './format.js';
-import { STATUSES, STATUS_LABELS, countEntries, countsLabel, localToday, seasonOfDate, seasonLabel, formatRehearsalDate, createSaveQueue } from './attendance.js';
+import { STATUSES, STATUS_LABELS, countEntries, countsLabel, localToday, seasonOfDate, seasonLabel, formatRehearsalDate, createSaveQueue, singleFlight } from './attendance.js';
 
 // Pestaña "Asistencia" del panel de administración. `ui` trae utilidades de admin-ui.js:
 // { state, reloadTab, showError, handleAuthError, alertSheet, confirmSheet, formError }.
@@ -22,7 +22,7 @@ export async function renderAttendance(view, ui) {
   sel.innerHTML = options.map(y => `<option value="${y}">${esc(seasonLabel(y))}</option>`).join('');
   sel.value = String(state.attendanceSeason);
   sel.addEventListener('change', () => { state.attendanceSeason = Number(sel.value); ui.reloadTab(); });
-  view.querySelector('[data-today]').addEventListener('click', e => openForDate(localToday(), '', ui, e.currentTarget));
+  view.querySelector('[data-today]').addEventListener('click', e => openForDateOnce(localToday(), '', ui, e.currentTarget));
   view.querySelector('[data-other]').addEventListener('click', () => otherDateForm(ui));
   view.querySelector('[data-report]').addEventListener('click', () => openReport(state.attendanceSeason, ui));
   let data;
@@ -40,10 +40,14 @@ export async function renderAttendance(view, ui) {
       <td>${esc(countsLabel(r))}</td></tr>`).join('')}</tbody></table></div>`;
   list.addEventListener('click', e => {
     const b = e.target.closest('[data-rehearsal]');
-    if (b) openRehearsal(Number(b.dataset.rehearsal), ui);
+    if (b) openRehearsalOnce(Number(b.dataset.rehearsal), ui);
   });
   focusFirst(view);
 }
+
+// Un doble toque con la red lenta no debe abrir dos listas del mismo ensayo (la de abajo quedaría desfasada).
+const openRehearsalOnce = singleFlight((id, ui) => openRehearsal(id, ui));
+const openForDateOnce = singleFlight((date, note, ui, button) => openForDate(date, note, ui, button));
 
 // Crea el ensayo de esa fecha o, si ya existe, abre el existente.
 async function openForDate(date, note, ui, button) {
@@ -111,8 +115,16 @@ function attendanceSheet(initial, ui) {
     },
     onState: (st, err) => showSave(st, err),
   });
+  // Al cerrar: se espera a que se guarde todo antes de recargar la lista; si algo no se pudo guardar, se avisa.
   const s = openSheet({ title: formatRehearsalDate(rehearsal.date), eyebrow: 'Asistencia', wide: true,
-    onClose: () => { queue.flush().catch(() => {}); ui.reloadTab(); } });
+    onClose: () => {
+      queue.drain().then(ui.reloadTab, err => {
+        ui.reloadTab();
+        if (ui.handleAuthError(err)) return;
+        const n = queue.pendingCount;
+        ui.alertSheet({ message: `No se ${n === 1 ? 'guardó 1 cambio' : `guardaron ${n} cambios`} de asistencia (${err.message}) Vuelve a abrir el ensayo y revísalo.` });
+      });
+    } });
   s.body.innerHTML = `<div class="attendance-head">
       <p class="admin-note" data-note></p>
       <button type="button" class="btn small quiet" data-edit>Editar</button>

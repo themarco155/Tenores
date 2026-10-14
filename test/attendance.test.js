@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { countEntries, countsLabel, localToday, seasonOfDate, seasonLabel, createSaveQueue } from '../practice/attendance.js';
+import { countEntries, countsLabel, localToday, seasonOfDate, seasonLabel, createSaveQueue, singleFlight } from '../practice/attendance.js';
 
 test('recuentos y texto con singular y plural', () => {
   const c = countEntries([{ status: 'present' }, { status: 'present' }, { status: 'late' }, { status: 'excused' }]);
@@ -69,4 +69,39 @@ test('los cambios hechos mientras se envía se mandan después', async () => {
   release();
   await q.flush();
   assert.deepEqual(sent, [[{ userId: 1, status: 'present' }], [{ userId: 2, status: 'late' }]]);
+});
+
+test('drain al cerrar: espera el envío en curso, manda lo que queda y avisa si algo no se guardó', async () => {
+  const timers = fakeTimers();
+  const sent = [];
+  let release, failNext = false;
+  const q = createSaveQueue({ send: batch => new Promise((res, rej) => { sent.push(batch); release = () => (failNext ? rej(new Error('red')) : res()); }), timers });
+  q.set(1, 'present');
+  q.flush();
+  q.set(2, 'late');
+  const done = q.drain();
+  release();
+  await new Promise(r => setTimeout(r));
+  release();
+  await done;
+  assert.deepEqual(sent, [[{ userId: 1, status: 'present' }], [{ userId: 2, status: 'late' }]]);
+  assert.equal(q.pendingCount, 0);
+  q.set(3, 'absent');
+  failNext = true;
+  const failing = q.drain();
+  release();
+  await assert.rejects(failing);
+  assert.equal(q.pendingCount, 1, 'el cambio que no se pudo guardar sigue pendiente');
+});
+
+test('singleFlight ignora dobles toques mientras la primera llamada sigue en curso', async () => {
+  let calls = 0, release;
+  const open = singleFlight(() => new Promise(r => { calls++; release = r; }));
+  const a = open(); const b = open();
+  assert.equal(calls, 1);
+  release('hoja');
+  assert.equal(await a, 'hoja');
+  assert.equal(await b, undefined);
+  open(); release();
+  assert.equal(calls, 2, 'tras terminar se puede volver a abrir');
 });

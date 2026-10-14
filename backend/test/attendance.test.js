@@ -169,3 +169,11 @@ test('reporte por API: solo ensayos de la temporada, límites de fecha y tempora
   assert.deepEqual((await t.call('GET', '/api/admin/attendance/report?season=1999', { token: t.admin })).body, { error: 'invalid', field: 'season' });
   assert.deepEqual((await t.call('GET', '/api/admin/attendance/seasons', { token: t.admin })).body, { seasons: [2026, 2025], current: 2026 });
 });
+
+test('la lista se ordena como en español (las tildes iniciales no van al final)', async () => {
+  const t = await adminSetup();
+  await t.seedUser({ username: 'angel', displayName: 'Ángel' });
+  await t.seedUser({ username: 'oscar', displayName: 'Óscar' });
+  const r = await t.call('POST', '/api/admin/rehearsals', { token: t.admin, body: { date: '2026-09-30' } });
+  assert.deepEqual(r.body.entries.map(e => e.user.displayName), ['Ana', 'Ángel', 'Jefe', 'Óscar']);
+});
