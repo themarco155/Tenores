@@ -105,3 +105,21 @@ test('singleFlight ignora dobles toques mientras la primera llamada sigue en cur
   open(); release();
   assert.equal(calls, 2, 'tras terminar se puede volver a abrir');
 });
+
+test('la cola usa los temporizadores del navegador sin "Illegal invocation"', async () => {
+  // En el navegador, setTimeout/clearTimeout fallan si se llaman como método de otro objeto.
+  const realSet = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+  const strict = real => function (...args) { if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation'); return real(...args); };
+  globalThis.setTimeout = strict(realSet);
+  globalThis.clearTimeout = strict(realClear);
+  try {
+    const sent = [];
+    const q = createSaveQueue({ send: async batch => { sent.push(batch); }, delay: 1 });
+    q.set(1, 'present');
+    await new Promise(r => realSet(r, 20));
+    assert.deepEqual(sent, [[{ userId: 1, status: 'present' }]]);
+  } finally {
+    globalThis.setTimeout = realSet;
+    globalThis.clearTimeout = realClear;
+  }
+});

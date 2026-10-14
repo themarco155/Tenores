@@ -27,7 +27,8 @@ export const formatRehearsalDate = date =>
 
 // Guarda los cambios de estado agrupados: espera `delay` ms tras el último toque y envía el último estado de cada
 // persona. Si el envío falla, los cambios vuelven a la cola (sin pisar uno más nuevo) hasta que se llame a flush().
-export function createSaveQueue({ send, delay = 500, onState = () => {}, timers = { set: setTimeout, clear: clearTimeout } }) {
+// (setTimeout/clearTimeout se envuelven: el navegador no permite llamarlos como método de otro objeto.)
+export function createSaveQueue({ send, delay = 500, onState = () => {}, timers = { set: (fn, ms) => setTimeout(fn, ms), clear: id => clearTimeout(id) } }) {
   const pending = new Map();
   let timer = null;
   let inflight = null;
