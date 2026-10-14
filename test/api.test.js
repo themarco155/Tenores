@@ -25,6 +25,10 @@ test('envía el token y el cuerpo JSON', async () => {
   clearSession();
 });
 
+test('mensaje de ensayo repetido', () => {
+  assert.equal(messageFor('rehearsal_exists'), 'Ya hay un ensayo registrado ese día.');
+});
+
 test('mensaje de título duplicado', () => {
   assert.equal(messageFor('title_taken'), 'Ya existe una canción con ese título.');
 });
