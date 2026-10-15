@@ -1,14 +1,17 @@
 import { createRecorder } from './recorder.js';
-import { playTone, playClick } from './tones.js';
+import { playTone, playClick, playClickAt } from './tones.js';
 import { runAnalysis } from './analysis-client.js';
 import { renderChart } from './chart.js';
 import { formatTime } from './util.js';
 import { mountSaveStatus } from './save-status.js';
 import { LIVE_PITCH } from './config.js';
 import { LIVE, noteName, targetFor, livePitch, deviationCents, tuningState } from './live-pitch.js';
+import { LATENCY, effectiveLatency, saveLatency, detectOnsets, measureLatency } from './latency.js';
+import { visibleNotes, foldToTarget, targetScale, stepScale, drawTrack, TRACK } from './live-track.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
-const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
+const GUIDE_WARNING = 'Usa auriculares, mejor con cable: si el micrófono capta la guía, la puntuación no será fiable. Con Bluetooth, pulsa «Calibrar auriculares» antes.';
+const LATENCY_SOURCE = { calibrated: 'calibrado', browser: 'automático', default: 'estimado' };
 const GUIDE_TIMEOUT_MS = 3000; // si la guía no empieza a sonar en este tiempo, se avisa
 const METRICS = [['pitch', 'Afinación'], ['rhythm', 'Ritmo y entradas', 'No cuenta en la nota'], ['stability', 'Estabilidad']];
 
@@ -216,6 +219,8 @@ function renderSetup() {
         <span><strong>Ponerme a prueba</strong><small>Escuchas la nota de partida y cantas solo.</small></span></label>
     </fieldset>
     <p class="practice-warning" data-guide-warning${mode === 'guide' ? '' : ' hidden'}>${GUIDE_WARNING}</p>
+    <p class="practice-latency"><span data-latency></span>
+      <button type="button" class="btn small quiet" data-calibrate>Calibrar auriculares</button></p>
     <fieldset><legend>Qué cantar</legend>
       <label class="practice-choice"><input type="radio" name="range" value="full"${range === 'full' ? ' checked' : ''}>
         <span><strong>Canción completa</strong></span></label>
@@ -241,7 +246,62 @@ function renderSetup() {
     form.querySelector('[data-guide-warning]').hidden = s.settings.mode !== 'guide';
     form.querySelector('[data-range]').hidden = s.settings.range !== 'phrases';
   });
+  const lat = effectiveLatency(s.recorder?.context ?? null);
+  form.querySelector('[data-latency]').textContent = `Retraso: ${lat.ms} ms (${LATENCY_SOURCE[lat.source]})`;
+  form.querySelector('[data-calibrate]').addEventListener('click', () => calibrate());
   form.addEventListener('submit', e => { e.preventDefault(); startTake(); });
+  focusBody();
+}
+
+async function ensureRecorder(token, retry) {
+  if (s.recorder) return true;
+  let rec;
+  try { rec = await createRecorder(); }
+  catch (err) { if (!stale(token)) renderError(micErrorMessage(err), retry); return false; }
+  if (stale(token)) { rec.dispose(); return false; }
+  s.recorder = rec;
+  return true;
+}
+
+// Calibrar auriculares: suenan clics, el tenor canta «ta» con cada uno y se mide cuánto llega tarde su voz.
+async function calibrate() {
+  cancelFlow();
+  const token = s.token;
+  if (!(await ensureRecorder(token, calibrate))) return;
+  const ctx = s.recorder.context;
+  await ctx.resume();
+  if (stale(token)) return;
+  renderCountdown('Calibrar', 'Ponte los auriculares que vas a usar. Canta «ta» a la vez que cada clic.');
+  await wait(2500);
+  if (stale(token)) return;
+  renderCountdown('♪', 'Canta «ta» con cada clic…');
+  s.recorder.start();
+  // La grabación llega en bloques de 2048 muestras: el origen puede desviarse unos 20–40 ms; se acepta.
+  const origin = ctx.currentTime;
+  const first = origin + 0.5;
+  const clicksMs = [];
+  for (let k = 0; k < LATENCY.clickCount; k++) {
+    const t = first + (k * LATENCY.clickIntervalMs) / 1000;
+    playClickAt(ctx, t, k === 0);
+    clicksMs.push(Math.round((t - origin) * 1000));
+  }
+  await wait(500 + LATENCY.clickCount * LATENCY.clickIntervalMs + 700);
+  const { samples, sampleRate } = s.recorder.stop();
+  if (stale(token)) return;
+  const r = measureLatency(detectOnsets(samples, sampleRate), clicksMs);
+  if (!r.ok) {
+    body.innerHTML = `<div class="practice-error" role="alert"><p>No te escuché bien. Inténtalo de nuevo, más cerca del micrófono.</p>
+      <div class="practice-actions"><button type="button" class="btn small" data-retry>Reintentar</button>
+      <button type="button" class="btn small quiet" data-back>Volver</button></div></div>`;
+    body.querySelector('[data-retry]').addEventListener('click', calibrate);
+    body.querySelector('[data-back]').addEventListener('click', renderSetup);
+    focusBody();
+    return;
+  }
+  saveLatency(r.ms);
+  body.innerHTML = `<div class="practice-message"><p>Retraso calibrado: ${r.ms} ms.</p>
+    <button type="button" class="btn small" data-back>Volver</button></div>`;
+  body.querySelector('[data-back]').addEventListener('click', renderSetup);
   focusBody();
 }
 
@@ -259,13 +319,7 @@ async function startTake() {
   const first = s.ref.phrases[from - 1], last = s.ref.phrases[to - 1];
   const startSec = first.start * hop, durSec = (last.end - first.start) * hop;
 
-  if (!s.recorder) {
-    let rec;
-    try { rec = await createRecorder(); }
-    catch (err) { if (!stale(token)) renderError(micErrorMessage(err), startTake); return; }
-    if (stale(token)) { rec.dispose(); return; }
-    s.recorder = rec;
-  }
+  if (!(await ensureRecorder(token, startTake))) return;
   const ctx = s.recorder.context;
   await ctx.resume();
   if (stale(token)) return;
@@ -309,7 +363,7 @@ function renderRecording(limitSec, token, take) {
     <div class="practice-meter" aria-hidden="true"><div class="practice-meter__fill"></div></div>
     ${live ? `<div class="practice-live" aria-hidden="true" data-state="none">
       <p class="practice-live__notes">Objetivo: <strong data-live-target>—</strong> · Tú: <strong data-live-user>—</strong> <span data-live-cents></span></p>
-      <div class="practice-live__scale"><span class="practice-live__ok"></span><span class="practice-live__needle" data-live-needle hidden></span></div>
+      <canvas class="practice-live__track"></canvas>
       <p class="practice-live__state" data-live-state></p>
     </div>` : ''}
     <div class="practice-progress" role="progressbar" aria-label="Progreso de la grabación" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -325,20 +379,38 @@ function renderRecording(limitSec, token, take) {
   const liveEl = live ? body.querySelector('.practice-live') : null;
   let lastLive = 0;
   const endFrame = live ? s.ref.phrases[take.to - 1]?.end ?? Infinity : Infinity; // la guía sigue sonando tras el fragmento
+  const lag = effectiveLatency(s.recorder.context).ms;
+  const points = [];
+  let scale = { center: 60, span: TRACK.minSpan };
+  const canvas = liveEl?.querySelector('.practice-live__track');
   const updateLive = () => {
     const { samples, sampleRate } = s.recorder.recent(LIVE.windowMs);
     const user = livePitch(samples, sampleRate, s.recorder.level);
-    const target = targetFor(s.ref, s.audio.currentTime, user, { endFrame });
+    const target = targetFor(s.ref, s.audio.currentTime, user, { lagMs: lag, endFrame });
     const cents = deviationCents(user, target);
     const st = tuningState(cents);
+    const te = s.audio.currentTime - lag / 1000;
+    points.push({ te, midi: foldToTarget(user, target), state: st.key });
+    while (points.length && points[0].te < te - TRACK.pastSec - 0.5) points.shift();
     liveEl.dataset.state = st.key;
     liveEl.querySelector('[data-live-target]').textContent = target == null ? '—' : noteName(target);
     liveEl.querySelector('[data-live-user]').textContent = user == null ? '—' : noteName(user);
     liveEl.querySelector('[data-live-cents]').textContent = cents == null ? '' : `${cents > 0 ? '+' : ''}${cents} cents`;
     liveEl.querySelector('[data-live-state]').textContent = st.text;
-    const needle = liveEl.querySelector('[data-live-needle]');
-    needle.hidden = cents == null;
-    if (cents != null) needle.style.left = `${50 + Math.max(-50, Math.min(50, cents))}%`;
+  };
+  const drawLive = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    const g = canvas.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const te = s.audio.currentTime - lag / 1000;
+    const notes = visibleNotes(s.ref, te, endFrame);
+    scale = stepScale(scale, targetScale(notes, scale));
+    drawTrack(g, { width: w, height: h, te, notes, points, scale });
   };
   const t0 = performance.now();
   const tick = () => {
@@ -350,7 +422,10 @@ function renderRecording(limitSec, token, take) {
     bar.setAttribute('aria-valuenow', String(Math.round(pct)));
     elapsedEl.textContent = formatTime(elapsed);
     const now = performance.now();
-    if (liveEl && now - lastLive >= 100) { lastLive = now; updateLive(); }
+    if (liveEl) {
+      if (now - lastLive >= 100) { lastLive = now; updateLive(); }
+      drawLive();
+    }
     s.raf = requestAnimationFrame(tick);
   };
   s.raf = requestAnimationFrame(tick);
