@@ -219,11 +219,11 @@ body.tsheet-open { overflow: hidden; }
 .practice-live { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
 .practice-live__notes { margin: 0; font-size: 15px; }
 .practice-live__notes strong { font-size: 18px; }
-.practice-live__scale { position: relative; height: 14px; background: #000; border-radius: 999px; border: 1px solid var(--card-border, #1b1d1f); }
-.practice-live__ok { position: absolute; top: 0; bottom: 0; left: 30%; width: 40%; background: rgba(15, 252, 126, .18); border-radius: 999px; }
-.practice-live__needle { position: absolute; top: -3px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: #fff; transition: left .08s linear; }
-.practice-live__needle[hidden] { display: none; }
 .practice-live__state { margin: 0; min-height: 1.3em; font-weight: 600; }
 .practice-live[data-state="ok"] .practice-live__state, .practice-live[data-state="ok"] [data-live-cents] { color: var(--practice-good, #0ffc7e); }
 .practice-live[data-state="warn"] .practice-live__state, .practice-live[data-state="warn"] [data-live-cents] { color: var(--practice-warn, #ffc400); }
 .practice-live[data-state="bad"] .practice-live__state, .practice-live[data-state="bad"] [data-live-cents] { color: var(--practice-bad, #ff5c5c); }
+
+/* Pista estilo karaoke y calibración del retraso */
+.practice-live__track { display: block; width: 100%; height: 120px; background: #000; border: 1px solid var(--card-border, #1b1d1f); border-radius: 12px; }
+.practice-latency { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--fg-muted, #dfe4ea); }
