@@ -15,8 +15,7 @@ export function playTone(ctx, midi, seconds = 1) {
   return new Promise(resolve => { osc.onended = () => resolve(); });
 }
 
-export function playClick(ctx, accent = false) {
-  const t = ctx.currentTime;
+export function playClickAt(ctx, t, accent = false) {
   const osc = ctx.createOscillator(), gain = ctx.createGain();
   osc.type = 'square';
   osc.frequency.value = accent ? 1500 : 1000;
@@ -26,3 +25,5 @@ export function playClick(ctx, accent = false) {
   osc.start(t);
   osc.stop(t + 0.05);
 }
+
+export const playClick = (ctx, accent = false) => playClickAt(ctx, ctx.currentTime, accent);
