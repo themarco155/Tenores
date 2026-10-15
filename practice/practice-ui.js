@@ -4,6 +4,8 @@ import { runAnalysis } from './analysis-client.js';
 import { renderChart } from './chart.js';
 import { formatTime } from './util.js';
 import { mountSaveStatus } from './save-status.js';
+import { LIVE_PITCH } from './config.js';
+import { LIVE, noteName, targetFor, livePitch, deviationCents, tuningState } from './live-pitch.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
@@ -301,9 +303,15 @@ async function startTake() {
 }
 
 function renderRecording(limitSec, token, take) {
+  const live = LIVE_PITCH && take.mode === 'guide';
   body.innerHTML = `<div class="practice-recording">
     <p class="practice-rec"><span class="practice-rec__dot" aria-hidden="true"></span>Grabando…</p>
     <div class="practice-meter" aria-hidden="true"><div class="practice-meter__fill"></div></div>
+    ${live ? `<div class="practice-live" aria-hidden="true" data-state="none">
+      <p class="practice-live__notes">Objetivo: <strong data-live-target>—</strong> · Tú: <strong data-live-user>—</strong> <span data-live-cents></span></p>
+      <div class="practice-live__scale"><span class="practice-live__ok"></span><span class="practice-live__needle" data-live-needle hidden></span></div>
+      <p class="practice-live__state" data-live-state></p>
+    </div>` : ''}
     <div class="practice-progress" role="progressbar" aria-label="Progreso de la grabación" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
       <div class="practice-progress__fill"></div></div>
     <p class="practice-time"><span data-elapsed>0:00</span> / ${formatTime(limitSec)}</p>
@@ -314,6 +322,24 @@ function renderRecording(limitSec, token, take) {
   const fill = body.querySelector('.practice-progress__fill');
   const elapsedEl = body.querySelector('[data-elapsed]');
   const stopBtn = body.querySelector('.practice-stop');
+  const liveEl = live ? body.querySelector('.practice-live') : null;
+  let lastLive = 0;
+  const endFrame = live ? s.ref.phrases[take.to - 1]?.end ?? Infinity : Infinity; // la guía sigue sonando tras el fragmento
+  const updateLive = () => {
+    const { samples, sampleRate } = s.recorder.recent(LIVE.windowMs);
+    const user = livePitch(samples, sampleRate, s.recorder.level);
+    const target = targetFor(s.ref, s.audio.currentTime, user, { endFrame });
+    const cents = deviationCents(user, target);
+    const st = tuningState(cents);
+    liveEl.dataset.state = st.key;
+    liveEl.querySelector('[data-live-target]').textContent = target == null ? '—' : noteName(target);
+    liveEl.querySelector('[data-live-user]').textContent = user == null ? '—' : noteName(user);
+    liveEl.querySelector('[data-live-cents]').textContent = cents == null ? '' : `${cents > 0 ? '+' : ''}${cents} cents`;
+    liveEl.querySelector('[data-live-state]').textContent = st.text;
+    const needle = liveEl.querySelector('[data-live-needle]');
+    needle.hidden = cents == null;
+    if (cents != null) needle.style.left = `${50 + Math.max(-50, Math.min(50, cents))}%`;
+  };
   const t0 = performance.now();
   const tick = () => {
     if (stale(token)) return;
@@ -323,6 +349,8 @@ function renderRecording(limitSec, token, take) {
     fill.style.width = `${pct}%`;
     bar.setAttribute('aria-valuenow', String(Math.round(pct)));
     elapsedEl.textContent = formatTime(elapsed);
+    const now = performance.now();
+    if (liveEl && now - lastLive >= 100) { lastLive = now; updateLive(); }
     s.raf = requestAnimationFrame(tick);
   };
   s.raf = requestAnimationFrame(tick);

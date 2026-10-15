@@ -11,3 +11,6 @@ export function resolveApiBase(hostname = globalThis.location?.hostname ?? '') {
 
 export const API_BASE = resolveApiBase();
 export const apiEnabled = API_BASE !== '';
+
+// Indicador de afinación en vivo durante la práctica con guía. false = desactivado.
+export const LIVE_PITCH = true;
