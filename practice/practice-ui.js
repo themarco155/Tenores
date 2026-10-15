@@ -5,7 +5,7 @@ import { renderChart } from './chart.js';
 import { formatTime } from './util.js';
 import { mountSaveStatus } from './save-status.js';
 import { LIVE_PITCH } from './config.js';
-import { LIVE, noteName, targetAt, livePitch, deviationCents, tuningState } from './live-pitch.js';
+import { LIVE, noteName, targetFor, livePitch, deviationCents, tuningState } from './live-pitch.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares: si el micrófono capta la guía, la puntuación no será fiable.';
@@ -328,7 +328,7 @@ function renderRecording(limitSec, token, take) {
   const updateLive = () => {
     const { samples, sampleRate } = s.recorder.recent(LIVE.windowMs);
     const user = livePitch(samples, sampleRate, s.recorder.level);
-    const target = targetAt(s.ref, s.audio.currentTime, LIVE.lagMs, endFrame);
+    const target = targetFor(s.ref, s.audio.currentTime, user, { endFrame });
     const cents = deviationCents(user, target);
     const st = tuningState(cents);
     liveEl.dataset.state = st.key;

@@ -2,7 +2,7 @@ import { detectPitch } from './pitch.js';
 import { median } from './util.js';
 
 // Indicador de afinación en vivo (modo con guía): utilidades puras.
-export const LIVE = { lagMs: 100, windowMs: 200, tailMs: 60, minLevel: 0.01, okCents: 20, warnCents: 50, edgeFrames: 3 };
+export const LIVE = { lagMs: 100, toleranceMs: 120, windowMs: 200, tailMs: 60, minLevel: 0.01, okCents: 20, warnCents: 50, edgeFrames: 3 };
 const NAMES = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
 
 // Búfer circular de muestras: guarda las últimas `capacity` y devuelve las últimas `n` en orden.
@@ -38,6 +38,18 @@ export function targetAt(ref, seconds, lagMs = LIVE.lagMs, endFrame = Infinity) 
   if (frame < 0 || frame >= endFrame) return null;
   const note = ref.notes.find(n => frame >= n.start && frame < n.end);
   return note ? note.midi : null;
+}
+
+// Como targetAt, pero en los cambios de nota (±toleranceMs) elige, entre las notas cercanas, la más parecida a lo
+// que canta el tenor: unos milisegundos de desfase entre la guía y la voz no deben marcarse como error.
+export function targetFor(ref, seconds, user, { lagMs = LIVE.lagMs, toleranceMs = LIVE.toleranceMs, endFrame = Infinity } = {}) {
+  const now = targetAt(ref, seconds, lagMs, endFrame);
+  if (now == null || user == null) return now;
+  const center = Math.round((seconds * 1000 - lagMs) / ref.hopMs);
+  const tol = Math.round(toleranceMs / ref.hopMs);
+  const lo = center - tol, hi = Math.min(center + tol, endFrame - 1);
+  const near = ref.notes.filter(n => n.start <= hi && n.end > lo && n.start < endFrame).map(n => n.midi);
+  return near.reduce((best, m) => (Math.abs(deviationCents(user, m)) < Math.abs(deviationCents(user, best)) ? m : best), now);
 }
 
 // Nota cantada en el último fragmento de micrófono (midi) o null si hay silencio.

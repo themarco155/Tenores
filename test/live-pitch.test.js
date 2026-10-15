@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSampleRing, noteName, targetAt, livePitch, deviationCents, tuningState } from '../practice/live-pitch.js';
+import { createSampleRing, noteName, targetAt, targetFor, livePitch, deviationCents, tuningState } from '../practice/live-pitch.js';
 import { sine, silence } from './helpers/synth.js';
 
 test('búfer circular: últimas muestras en orden, también al dar la vuelta', () => {
@@ -62,4 +62,15 @@ test('sin objetivo después del final del fragmento elegido', () => {
   assert.equal(targetAt(REF, 1.35), 57, 'sin límite, la nota siguiente');
   assert.equal(targetAt(REF, 1.35, 100, 111), null, 'frame 125 ≥ fin del fragmento (111)');
   assert.equal(targetAt(REF, 0.95, 100, 111), 59.36, 'dentro del fragmento');
+});
+
+test('en un cambio de nota se compara con la nota cercana más parecida a lo que se canta', () => {
+  // t = 0.89 s → frame 79, justo donde empieza la segunda nota (59.36)
+  assert.equal(targetFor(REF, 0.89, 60.1), 60.1, 'aún en la nota anterior: no es error');
+  assert.equal(targetFor(REF, 0.89, 59.4), 59.36, 'ya en la nota nueva');
+  assert.equal(targetFor(REF, 0.89, null), 59.36, 'sin voz: la nota de ese instante');
+  assert.equal(targetFor(REF, 0.75, 59.36), 60.1, 'lejos del cambio (140 ms): solo la nota actual');
+  assert.equal(targetFor(REF, 1.25, 57), null, 'entre frases sigue sin objetivo');
+  assert.equal(targetFor(REF, 1.18, 57), 57, 'frame 108: la nota siguiente (120) está a menos de 120 ms');
+  assert.equal(targetFor(REF, 1.18, 57, { endFrame: 111 }), 59.36, 'pero no si queda fuera del fragmento');
 });
