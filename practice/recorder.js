@@ -1,3 +1,5 @@
+import { createSampleRing } from './live-pitch.js';
+
 export function isRecordingSupported() {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia &&
     typeof AudioWorkletNode !== 'undefined' && (window.AudioContext || window.webkitAudioContext));
@@ -28,11 +30,13 @@ export async function createRecorder() {
   sink.connect(context.destination);
 
   let chunks = [], recording = false, level = 0;
+  const ring = createSampleRing(Math.round(context.sampleRate * 0.5)); // últimos 0,5 s, para el indicador en vivo
   node.port.onmessage = e => {
     const data = e.data;
     let sum = 0;
     for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
     level = Math.sqrt(sum / data.length);
+    ring.push(data);
     if (recording) chunks.push(data);
   };
 
@@ -40,6 +44,7 @@ export async function createRecorder() {
     context,
     get sampleRate() { return context.sampleRate; },
     get level() { return level; },
+    recent(ms) { return { samples: ring.latest(Math.round((ms / 1000) * context.sampleRate)), sampleRate: context.sampleRate }; },
     start() { chunks = []; recording = true; },
     stop() {
       recording = false;
