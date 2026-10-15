@@ -2,7 +2,7 @@ import { detectPitch } from './pitch.js';
 import { median } from './util.js';
 
 // Indicador de afinación en vivo (modo con guía): utilidades puras.
-export const LIVE = { lagMs: 100, toleranceMs: 120, windowMs: 200, tailMs: 60, minLevel: 0.01, okCents: 20, warnCents: 50, edgeFrames: 3 };
+export const LIVE = { lagMs: 100, toleranceMs: 120, windowMs: 260, tailMs: 180, minLevel: 0.01, okCents: 20, warnCents: 50, edgeFrames: 3 };
 const NAMES = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
 
 // Búfer circular de muestras: guarda las últimas `capacity` y devuelve las últimas `n` en orden.
