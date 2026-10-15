@@ -7,7 +7,7 @@ import { mountSaveStatus } from './save-status.js';
 import { LIVE_PITCH } from './config.js';
 import { LIVE, noteName, targetFor, livePitch, deviationCents, tuningState } from './live-pitch.js';
 import { LATENCY, effectiveLatency, saveLatency, detectOnsets, measureLatency } from './latency.js';
-import { visibleNotes, foldToTarget, targetScale, stepScale, drawTrack, TRACK } from './live-track.js';
+import { visibleNotes, createTrail, targetScale, stepScale, drawTrack, TRACK } from './live-track.js';
 
 const PITCH_DIR = new URL('../assets/pitch/', import.meta.url);
 const GUIDE_WARNING = 'Usa auriculares, mejor con cable: si el micrófono capta la guía, la puntuación no será fiable. Con Bluetooth, pulsa «Calibrar auriculares» antes.';
@@ -380,7 +380,8 @@ function renderRecording(limitSec, token, take) {
   let lastLive = 0;
   const endFrame = live ? s.ref.phrases[take.to - 1]?.end ?? Infinity : Infinity; // la guía sigue sonando tras el fragmento
   const lag = effectiveLatency(s.recorder.context).ms;
-  const points = [];
+  const trail = createTrail();
+  const startFrame = live ? s.ref.phrases[take.from - 1]?.start ?? 0 : 0;
   let scale = { center: 60, span: TRACK.minSpan };
   const canvas = liveEl?.querySelector('.practice-live__track');
   const updateLive = () => {
@@ -390,8 +391,7 @@ function renderRecording(limitSec, token, take) {
     const cents = deviationCents(user, target);
     const st = tuningState(cents);
     const te = s.audio.currentTime - lag / 1000;
-    points.push({ te, midi: foldToTarget(user, target), state: st.key });
-    while (points.length && points[0].te < te - TRACK.pastSec - 0.5) points.shift();
+    trail.push(te, user, target, st.key);
     liveEl.dataset.state = st.key;
     liveEl.querySelector('[data-live-target]').textContent = target == null ? '—' : noteName(target);
     liveEl.querySelector('[data-live-user]').textContent = user == null ? '—' : noteName(user);
@@ -408,9 +408,9 @@ function renderRecording(limitSec, token, take) {
     const g = canvas.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const te = s.audio.currentTime - lag / 1000;
-    const notes = visibleNotes(s.ref, te, endFrame);
+    const notes = visibleNotes(s.ref, te, endFrame, startFrame);
     scale = stepScale(scale, targetScale(notes, scale));
-    drawTrack(g, { width: w, height: h, te, notes, points, scale });
+    drawTrack(g, { width: w, height: h, te, notes, points: trail.points, scale });
   };
   const t0 = performance.now();
   const tick = () => {
@@ -423,8 +423,10 @@ function renderRecording(limitSec, token, take) {
     elapsedEl.textContent = formatTime(elapsed);
     const now = performance.now();
     if (liveEl) {
-      if (now - lastLive >= 100) { lastLive = now; updateLive(); }
-      drawLive();
+      try { // un fallo del indicador no debe congelar la grabación
+        if (now - lastLive >= 100) { lastLive = now; updateLive(); }
+        drawLive();
+      } catch (err) { console.error(err); }
     }
     s.raf = requestAnimationFrame(tick);
   };

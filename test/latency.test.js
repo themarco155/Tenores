@@ -57,3 +57,8 @@ test('measureLatency: pocos datos, dispersión alta o fuera de rango → no vale
   const early = CLICKS.slice(1).map(c => c - 80);
   assert.deepEqual(measureLatency(early, CLICKS), { ok: false, reason: 'range' });
 });
+
+test('measureLatency: con cable la voz puede llegar algo antes del clic; cuenta como 0 ms', () => {
+  const early = CLICKS.slice(1).map((c, i) => c + [-30, -20, -40, -25, -35][i]);
+  assert.deepEqual(measureLatency(early, CLICKS), { ok: true, ms: 0 });
+});

@@ -6,12 +6,12 @@ const COLORS = { ok: '#0ffc7e', warn: '#ffc400', bad: '#ff5c5c', none: '#9ba3b1'
   current: '#1f6b45', now: 'rgba(255,255,255,.7)' };
 
 // Notas de la referencia (en segundos) que caen en la ventana alrededor de `te`, recortadas al fragmento.
-export function visibleNotes(ref, te, endFrame = Infinity) {
+export function visibleNotes(ref, te, endFrame = Infinity, startFrame = 0) {
   const hop = ref.hopMs / 1000;
   const from = te - TRACK.pastSec, to = te + TRACK.futureSec;
   return ref.notes
-    .filter(n => n.start < endFrame)
-    .map(n => ({ start: n.start * hop, end: Math.min(n.end, endFrame) * hop, midi: n.midi }))
+    .filter(n => n.start < endFrame && n.end > startFrame)
+    .map(n => ({ start: Math.max(n.start, startFrame) * hop, end: Math.min(n.end, endFrame) * hop, midi: n.midi }))
     .filter(n => n.end > from && n.start < to)
     .map(n => ({ ...n, current: n.start <= te && te < n.end }));
 }
@@ -20,6 +20,20 @@ export function foldToTarget(user, target) {
   if (user == null) return null;
   if (target == null) return user;
   return target + deviationCents(user, target) / 100;
+}
+
+// Lecturas recientes de la voz; entre notas se pliegan a la octava de la última nota para que la línea no salte.
+export function createTrail() {
+  const points = [];
+  let lastTarget = null;
+  return {
+    points,
+    push(te, user, target, state) {
+      if (target != null) lastTarget = target;
+      points.push({ te, midi: foldToTarget(user, target ?? lastTarget), state });
+      while (points.length && points[0].te < te - TRACK.pastSec) points.shift();
+    },
+  };
 }
 
 export function targetScale(notes, prev) {
@@ -47,10 +61,16 @@ export function drawTrack(g, { width, height, te, notes, points, scale }) {
     const x0 = Math.max(0, timeToX(n.start, te, width)), x1 = Math.min(width, timeToX(n.end, te, width));
     const y = midiToY(n.midi, scale, height);
     g.fillStyle = n.current ? COLORS.current : COLORS.bar;
-    g.beginPath();
-    g.roundRect(x0, y - 5, Math.max(4, x1 - x0), 10, 5);
-    g.fill();
-    if (n.current) { g.strokeStyle = COLORS.ok; g.lineWidth = 1.5; g.stroke(); }
+    const w = Math.max(4, x1 - x0);
+    if (g.roundRect) {
+      g.beginPath();
+      g.roundRect(x0, y - 5, w, 10, 5);
+      g.fill();
+      if (n.current) { g.strokeStyle = COLORS.ok; g.lineWidth = 1.5; g.stroke(); }
+    } else { // Safari < 16
+      g.fillRect(x0, y - 5, w, 10);
+      if (n.current) { g.strokeStyle = COLORS.ok; g.lineWidth = 1.5; g.strokeRect(x0, y - 5, w, 10); }
+    }
     g.fillStyle = n.current ? COLORS.ok : COLORS.label;
     g.fillText(noteName(n.midi), x0 + 2, y - 8);
   }
@@ -70,7 +90,7 @@ export function drawTrack(g, { width, height, te, notes, points, scale }) {
     g.lineTo(timeToX(b.te, te, width), midiToY(b.midi, scale, height));
     g.stroke();
   }
-  const last = points.at(-1);
+  const last = points[points.length - 1];
   if (last && last.midi != null && te - last.te < TRACK.gapSec) {
     g.fillStyle = COLORS[last.state] || COLORS.none;
     g.beginPath(); g.arc(timeToX(last.te, te, width), midiToY(last.midi, scale, height), 5, 0, Math.PI * 2); g.fill();

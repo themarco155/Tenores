@@ -3,7 +3,7 @@ import { median } from './util.js';
 // Retraso total de auriculares/altavoz + micrófono: calibración guardada, valor del navegador y valor efectivo.
 const KEY = 'tenores.latency.v1';
 export const LATENCY = { defaultMs: 100, inputMs: 20, maxMs: 500, clickCount: 6, clickIntervalMs: 600,
-  windowBeforeMs: 100, windowAfterMs: 600, minOffsets: 3, maxSpreadMs: 60 };
+  windowBeforeMs: 100, windowAfterMs: 600, minOffsets: 3, maxSpreadMs: 60, earlyMs: 50 };
 
 let storage = () => globalThis.localStorage;
 export function configureLatencyStorage(store) { storage = () => store; }
@@ -69,6 +69,7 @@ export function measureLatency(onsetsMs, clicksMs) {
   const med = median(offsets);
   const spread = median(offsets.map(x => Math.abs(x - med)));
   if (spread > LATENCY.maxSpreadMs) return { ok: false, reason: 'spread' };
-  if (med < 0 || med > LATENCY.maxMs) return { ok: false, reason: 'range' };
-  return { ok: true, ms: Math.round(med) };
+  // Con cable, quien canta al ritmo de los clics puede adelantarse un poco: hasta 50 ms antes cuenta como 0.
+  if (med < -LATENCY.earlyMs || med > LATENCY.maxMs) return { ok: false, reason: 'range' };
+  return { ok: true, ms: Math.max(0, Math.round(med)) };
 }
