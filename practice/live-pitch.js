@@ -31,10 +31,11 @@ export function noteName(midi) {
   return `${NAMES[((n % 12) + 12) % 12]}${Math.floor(n / 12) - 1}`;
 }
 
-// Nota de la referencia que suena `lagMs` antes del instante `seconds` de la canción (o null entre notas).
-export function targetAt(ref, seconds, lagMs = LIVE.lagMs) {
+// Nota de la referencia que suena `lagMs` antes del instante `seconds` de la canción (o null entre notas
+// y a partir de `endFrame`, el final del fragmento elegido).
+export function targetAt(ref, seconds, lagMs = LIVE.lagMs, endFrame = Infinity) {
   const frame = Math.round((seconds * 1000 - lagMs) / ref.hopMs);
-  if (frame < 0) return null;
+  if (frame < 0 || frame >= endFrame) return null;
   const note = ref.notes.find(n => frame >= n.start && frame < n.end);
   return note ? note.midi : null;
 }

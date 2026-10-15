@@ -324,10 +324,11 @@ function renderRecording(limitSec, token, take) {
   const stopBtn = body.querySelector('.practice-stop');
   const liveEl = live ? body.querySelector('.practice-live') : null;
   let lastLive = 0;
+  const endFrame = live ? s.ref.phrases[take.to - 1]?.end ?? Infinity : Infinity; // la guía sigue sonando tras el fragmento
   const updateLive = () => {
     const { samples, sampleRate } = s.recorder.recent(LIVE.windowMs);
     const user = livePitch(samples, sampleRate, s.recorder.level);
-    const target = targetAt(s.ref, s.audio.currentTime);
+    const target = targetAt(s.ref, s.audio.currentTime, LIVE.lagMs, endFrame);
     const cents = deviationCents(user, target);
     const st = tuningState(cents);
     liveEl.dataset.state = st.key;

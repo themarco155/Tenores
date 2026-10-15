@@ -57,3 +57,9 @@ test('nota en vivo: tono de 220 Hz → La3; silencio o nivel bajo → null', () 
   assert.equal(livePitch(tone, 48000, 0.005), null, 'nivel por debajo del mínimo');
   assert.equal(livePitch(new Float32Array(0), 48000, 0.3), null);
 });
+
+test('sin objetivo después del final del fragmento elegido', () => {
+  assert.equal(targetAt(REF, 1.35), 57, 'sin límite, la nota siguiente');
+  assert.equal(targetAt(REF, 1.35, 100, 111), null, 'frame 125 ≥ fin del fragmento (111)');
+  assert.equal(targetAt(REF, 0.95, 100, 111), 59.36, 'dentro del fragmento');
+});
